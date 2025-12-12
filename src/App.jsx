@@ -38,9 +38,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <BookOpen className="w-8 h-8" />
+              <BookOpen className="w-8 h-8 text-[#816A79]" />
               <div>
-                <h1 className="text-2xl font-bold">Pharmacological & Pharmaceutical Innovation</h1>
+                <h1 className="text-2xl font-bold text-[#893F38]">Pharmacological & Pharmaceutical Innovation</h1>
                 <p className="text-[#006B8F] text-sm">International Peer-Reviewed Journal</p>
               </div>
             </div>
@@ -74,7 +74,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-4xl font-bold text-[#B43B3A] mb-4">
                 Advancing Pharmaceutical Science
               </h2>
               <p className="text-lg text-gray-700 mb-6">
