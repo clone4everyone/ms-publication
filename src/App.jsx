@@ -34,14 +34,14 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg">
+      <header className="bg-gradient-to-r from-[#FFD400] to-[#9b8100] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <BookOpen className="w-8 h-8" />
               <div>
                 <h1 className="text-2xl font-bold">Pharmacological & Pharmaceutical Innovation</h1>
-                <p className="text-teal-100 text-sm">International Peer-Reviewed Journal</p>
+                <p className="text-[#006B8F] text-sm">International Peer-Reviewed Journal</p>
               </div>
             </div>
             
@@ -59,7 +59,7 @@ export default function App() {
             <ul className="flex flex-col lg:flex-row lg:space-x-6 space-y-2 lg:space-y-0">
               {navItems.map((item) => (
                 <li key={item}>
-                  <a href="#" className="block hover:text-teal-200 transition-colors py-1">
+                  <a href="#" className="block hover:text-[#006B8F] transition-colors py-1">
                     {item}
                   </a>
                 </li>
@@ -70,7 +70,7 @@ export default function App() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-teal-50 to-blue-50 py-12 border-b border-teal-100">
+      <section className="bg-gradient-to-br from-[#006B8F] to-blue-50 py-12 border-b border-[#006B8F">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
@@ -81,10 +81,10 @@ export default function App() {
                 Publishing cutting-edge research in pharmacology, drug development, and pharmaceutical innovation since 2009.
               </p>
               <div className="flex flex-wrap gap-4">
-                <button className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                <button className="bg-[#006B8F] hover:bg-[#05ace3] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
                   Submit Your Research
                 </button>
-                <button className="border-2 border-teal-600 text-teal-600 hover:bg-teal-50 px-6 py-3 rounded-lg font-semibold transition-colors">
+                <button className="border-2 border-[#006B8F] text-[#006B8F] hover:text-white hover:bg-[#006B8F] px-6 py-3 rounded-lg font-semibold transition-colors">
                   Browse Articles
                 </button>
               </div>
@@ -92,24 +92,24 @@ export default function App() {
             
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <Bell className="w-5 h-5 mr-2 text-teal-600" />
+                <Bell className="w-5 h-5 mr-2 text-[#006B8F]" />
                 Journal Highlights
               </h3>
               <ul className="space-y-3 text-gray-700">
                 <li className="flex items-start">
-                  <ChevronRight className="w-5 h-5 text-teal-600 mr-2 flex-shrink-0 mt-0.5" />
+                  <ChevronRight className="w-5 h-5 text-[#006B8F] mr-2 flex-shrink-0 mt-0.5" />
                   <span>Impact Factor: 3.84 (2024)</span>
                 </li>
                 <li className="flex items-start">
-                  <ChevronRight className="w-5 h-5 text-teal-600 mr-2 flex-shrink-0 mt-0.5" />
+                  <ChevronRight className="w-5 h-5 text-[#006B8F] mr-2 flex-shrink-0 mt-0.5" />
                   <span>Open Access - Free to read for all</span>
                 </li>
                 <li className="flex items-start">
-                  <ChevronRight className="w-5 h-5 text-teal-600 mr-2 flex-shrink-0 mt-0.5" />
+                  <ChevronRight className="w-5 h-5 text-[#006B8F] mr-2 flex-shrink-0 mt-0.5" />
                   <span>Rapid peer review (4-6 weeks)</span>
                 </li>
                 <li className="flex items-start">
-                  <ChevronRight className="w-5 h-5 text-teal-600 mr-2 flex-shrink-0 mt-0.5" />
+                  <ChevronRight className="w-5 h-5 text-[#006B8F] mr-2 flex-shrink-0 mt-0.5" />
                   <span>Indexed in major databases</span>
                 </li>
               </ul>
@@ -129,7 +129,7 @@ export default function App() {
                 placeholder="Search articles, authors, keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"
+                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#006B8F] focus:outline-none"
               />
             </div>
           </div>
@@ -146,18 +146,18 @@ export default function App() {
               {latestArticles.map((article, index) => (
                 <article key={index} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                   <div className="flex items-start justify-between mb-3">
-                    <span className="text-sm font-semibold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
+                    <span className="text-sm font-semibold text-[#006B8F] bg-teal-50 px-3 py-1 rounded-full">
                       {article.volume}
                     </span>
                     <span className="text-sm text-gray-500">{article.date}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 hover:text-teal-600 cursor-pointer">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 hover:text-[#006B8F] cursor-pointer">
                     {article.title}
                   </h3>
                   <p className="text-sm text-gray-600 mb-3">{article.authors}</p>
                   <p className="text-gray-700 mb-4">{article.abstract}</p>
                   <div className="flex gap-3">
-                    <button className="text-teal-600 hover:text-teal-700 font-semibold text-sm flex items-center">
+                    <button className="text-[#006B8F] hover:text-teal-700 font-semibold text-sm flex items-center">
                       Read Full Article <ChevronRight className="w-4 h-4 ml-1" />
                     </button>
                     <button className="text-gray-600 hover:text-gray-700 font-semibold text-sm">
@@ -172,11 +172,11 @@ export default function App() {
           {/* Sidebar */}
           <aside className="space-y-6">
             {/* Current Issue */}
-            <div className="bg-gradient-to-br from-teal-600 to-teal-700 text-white p-6 rounded-xl shadow-lg">
+            <div className="bg-gradient-to-br from-[#006B8F] to-teal-700 text-white p-6 rounded-xl shadow-lg">
               <h3 className="text-xl font-bold mb-3">Current Issue</h3>
               <p className="text-teal-100 mb-4">Volume 15, Issue 6</p>
               <p className="mb-4">November 2024</p>
-              <button className="bg-white text-teal-600 hover:bg-teal-50 px-4 py-2 rounded-lg font-semibold w-full transition-colors">
+              <button className="bg-white text-[#006B8F] hover:bg-teal-50 px-4 py-2 rounded-lg font-semibold w-full transition-colors">
                 View Issue
               </button>
             </div>
@@ -184,30 +184,30 @@ export default function App() {
             {/* Quick Links */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <FileText className="w-5 h-5 mr-2 text-teal-600" />
+                <FileText className="w-5 h-5 mr-2 text-[#006B8F]" />
                 For Authors
               </h3>
               <ul className="space-y-3">
                 <li>
-                  <a href="#" className="text-teal-600 hover:text-teal-700 flex items-center">
+                  <a href="#" className="text-[#006B8F] hover:text-teal-700 flex items-center">
                     <ChevronRight className="w-4 h-4 mr-1" />
                     Submission Guidelines
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-teal-600 hover:text-teal-700 flex items-center">
+                  <a href="#" className="text-[#006B8F] hover:text-teal-700 flex items-center">
                     <ChevronRight className="w-4 h-4 mr-1" />
                     Author Instructions
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-teal-600 hover:text-teal-700 flex items-center">
+                  <a href="#" className="text-[#006B8F] hover:text-teal-700 flex items-center">
                     <ChevronRight className="w-4 h-4 mr-1" />
                     Article Processing Charges
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-teal-600 hover:text-teal-700 flex items-center">
+                  <a href="#" className="text-[#006B8F] hover:text-teal-700 flex items-center">
                     <ChevronRight className="w-4 h-4 mr-1" />
                     Track Your Submission
                   </a>
@@ -218,13 +218,13 @@ export default function App() {
             {/* Editorial Board */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-teal-600" />
+                <Users className="w-5 h-5 mr-2 text-[#006B8F]" />
                 Editorial Board
               </h3>
               <p className="text-gray-700 mb-4">
                 Led by internationally recognized experts in pharmaceutical sciences.
               </p>
-              <button className="text-teal-600 hover:text-teal-700 font-semibold flex items-center">
+              <button className="text-[#006B8F] hover:text-teal-700 font-semibold flex items-center">
                 View Full Board <ChevronRight className="w-4 h-4 ml-1" />
               </button>
             </div>
