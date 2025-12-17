@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import { 
   FaPlus, FaSignOutAlt, FaUser, FaEnvelope, FaFile, 
   FaClock, FaCheckCircle, FaTimesCircle, FaSearch,
-  FaFilter, FaSortAmountDown
+  FaFilter, FaSortAmountDown, FaTimes
 } from 'react-icons/fa';
 import { format } from 'date-fns';
 
@@ -18,7 +18,12 @@ function AuthorDashboard() {
   const { user } = useSelector((state) => state.auth);
   const { submissions, isLoading } = useSelector((state) => state.submissions);
   const { unreadCount } = useSelector((state) => state.emails);
-  
+  const [showProfileModal, setShowProfileModal] = useState(false);
+const [passwordData, setPasswordData] = useState({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -33,6 +38,38 @@ function AuthorDashboard() {
     navigate('/login');
     toast.success('Logged out successfully');
   };
+const handleChangePassword = async () => {
+  if (passwordData.newPassword !== passwordData.confirmPassword) {
+    toast.error('Passwords do not match');
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/auth/change-password', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      })
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      toast.success('Password changed successfully');
+      setShowProfileModal(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    toast.error('Error changing password');
+  }
+};
 
   const getStatusBadge = (status) => {
     const statusMap = {
@@ -159,6 +196,15 @@ function AuthorDashboard() {
                 </div>
               )}
             </div>
+            <div className="mt-4 px-2">
+  <button
+    onClick={() => setShowProfileModal(true)}
+    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+  >
+    <FaUser className="w-4 h-4" />
+    <span className="text-sm font-medium">Profile Settings</span>
+  </button>
+</div>
           </div>
         </div>
 
@@ -242,6 +288,7 @@ function AuthorDashboard() {
                     </div>
                   );
                 })}
+                
               </div>
             )}
           </div>
@@ -267,6 +314,71 @@ function AuthorDashboard() {
           </div>
         </div>
       </div>
+      {showProfileModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-semibold">Change Password</h3>
+        <button onClick={() => setShowProfileModal(false)}>
+          <FaTimes className="w-5 h-5 text-gray-500 hover:text-gray-700" />
+        </button>
+      </div>
+      
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Current Password
+          </label>
+          <input
+            type="password"
+            value={passwordData.currentPassword}
+            onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            New Password
+          </label>
+          <input
+            type="password"
+            value={passwordData.newPassword}
+            onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Confirm New Password
+          </label>
+          <input
+            type="password"
+            value={passwordData.confirmPassword}
+            onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+          />
+        </div>
+      </div>
+      
+      <div className="flex justify-end space-x-3 mt-6">
+        <button
+          onClick={() => setShowProfileModal(false)}
+          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleChangePassword}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Change Password
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

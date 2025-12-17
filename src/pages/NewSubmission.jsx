@@ -10,7 +10,8 @@ import {
 } from '../redux/slices/submissionSlice';
 import { toast } from 'react-toastify';
 import { FaArrowLeft, FaArrowRight, FaCheck, FaUpload, FaTimes } from 'react-icons/fa';
-
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 const STEPS = [
   { number: 1, title: 'Start', description: 'Basic information' },
   { number: 2, title: 'Upload', description: 'Document upload' },
@@ -59,9 +60,52 @@ function NewSubmission() {
     abstract: '',
     coAuthors: [],
     keywords: [],
-    references: '',
-    keywordInput: ''
+    references: [],
+    keywordInput: '',
+     referenceInput: ''  // Add this
   });
+
+  const [keywordSuggestions, setKeywordSuggestions] = useState([]);
+const [showSuggestions, setShowSuggestions] = useState(false);
+const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+// Add this function after the state declarations
+const fetchKeywordSuggestions = async (query) => {
+  if (!query || query.length < 2 || !step1Data.journal) return;
+  
+  setLoadingSuggestions(true);
+  try {
+    // Call your API or use a service to get keyword suggestions
+    const response = await axios.get(`/api/keywords/suggestions`, {
+      params: {
+        journal: step1Data.journal,
+        query: query
+      }
+    });
+    
+    if (response.data.success) {
+      setKeywordSuggestions(response.data.data.suggestions);
+      setShowSuggestions(true);
+    }
+  } catch (error) {
+    console.error('Error fetching keyword suggestions:', error);
+    // Fallback to generic suggestions if API fails
+    setKeywordSuggestions([]);
+  } finally {
+    setLoadingSuggestions(false);
+  }
+};
+
+// Debounce function for keyword input
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
+
+const debouncedFetchKeywords = debounce(fetchKeywordSuggestions, 300);
 
   useEffect(() => {
     return () => {
@@ -139,6 +183,33 @@ function NewSubmission() {
     }
   };
 
+const addReference = () => {
+  // Use the current state value directly via callback
+  setStep3Data(prev => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = prev.referenceInput;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    if (!textContent.trim()) {
+      toast.error('Please enter a reference');
+      return prev; // Return unchanged state
+    }
+    
+    // Add the reference and clear the input
+    const newReferences = [...prev.references, prev.referenceInput];
+    toast.success('Reference added successfully');
+    
+    return {
+      ...prev,
+      references: newReferences,
+      referenceInput: '' // Clear the input
+    };
+  });
+};
+const removeReference = (index) => {
+  const newReferences = step3Data.references.filter((_, i) => i !== index);
+  setStep3Data({ ...step3Data, references: newReferences });
+};
   const addReviewer = () => {
     setStep1Data({
       ...step1Data,
@@ -494,49 +565,117 @@ function NewSubmission() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Abstract *</label>
-                <textarea
-                  value={step3Data.abstract}
-                  onChange={(e) => setStep3Data({ ...step3Data, abstract: e.target.value })}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-outlook-blue"
-                />
-              </div>
+           
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">Abstract *</label>
+  <ReactQuill
+    theme="snow"
+    value={step3Data.abstract}
+    onChange={(content) => setStep3Data({ ...step3Data, abstract: content })}
+    modules={{
+      toolbar: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'script': 'sub'}, { 'script': 'super' }],
+        ['link'],
+        ['clean']
+      ]
+    }}
+    className="bg-white"
+    style={{ height: '200px', marginBottom: '50px' }}
+  />
+</div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Keywords</label>
-                <div className="flex space-x-2 mb-3">
-                  <input
-                    type="text"
-                    value={step3Data.keywordInput}
-                    onChange={(e) => setStep3Data({ ...step3Data, keywordInput: e.target.value })}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
-                    placeholder="Type keyword and press Enter"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-outlook-blue"
-                  />
-                  <button
-                    type="button"
-                    onClick={addKeyword}
-                    className="bg-outlook-blue text-white px-4 py-2 rounded-lg hover:bg-outlook-darkBlue"
-                  >
-                    Add
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {step3Data.keywords.map((keyword, index) => (
-                    <span
-                      key={index}
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center space-x-2"
-                    >
-                      <span>{keyword}</span>
-                      <button onClick={() => removeKeyword(index)}>
-                        <FaTimes className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
+      
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">Keywords</label>
+  <div className="relative">
+    <div className="flex space-x-2 mb-3">
+      <input
+        type="text"
+        value={step3Data.keywordInput}
+        onChange={(e) => {
+          setStep3Data({ ...step3Data, keywordInput: e.target.value });
+          debouncedFetchKeywords(e.target.value);
+        }}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addKeyword();
+            setShowSuggestions(false);
+          }
+        }}
+        onFocus={() => {
+          if (step3Data.keywordInput.length >= 2) {
+            setShowSuggestions(true);
+          }
+        }}
+        onBlur={() => {
+          // Delay to allow click on suggestion
+          setTimeout(() => setShowSuggestions(false), 200);
+        }}
+        placeholder="Type keyword for suggestions..."
+        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-outlook-blue"
+      />
+      <button
+        type="button"
+        onClick={() => {
+          addKeyword();
+          setShowSuggestions(false);
+        }}
+        className="bg-outlook-blue text-white px-4 py-2 rounded-lg hover:bg-outlook-darkBlue"
+      >
+        Add
+      </button>
+    </div>
+    
+    {/* Keyword Suggestions Dropdown */}
+    {showSuggestions && step3Data.keywordInput.length >= 2 && (
+      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        {loadingSuggestions ? (
+          <div className="px-4 py-3 text-sm text-gray-500">Loading suggestions...</div>
+        ) : keywordSuggestions.length > 0 ? (
+          keywordSuggestions.map((suggestion, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => {
+                setStep3Data({
+                  ...step3Data,
+                  keywords: [...step3Data.keywords, suggestion],
+                  keywordInput: ''
+                });
+                setShowSuggestions(false);
+              }}
+              className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm transition-colors"
+            >
+              {suggestion}
+            </button>
+          ))
+        ) : (
+          <div className="px-4 py-3 text-sm text-gray-500">
+            No suggestions found. Press Enter to add "{step3Data.keywordInput}"
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+  
+  <div className="flex flex-wrap gap-2">
+    {step3Data.keywords.map((keyword, index) => (
+      <span
+        key={index}
+        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center space-x-2"
+      >
+        <span>{keyword}</span>
+        <button onClick={() => removeKeyword(index)}>
+          <FaTimes className="w-3 h-3" />
+        </button>
+      </span>
+    ))}
+  </div>
+</div>
 
               <div>
                 <div className="flex justify-between items-center mb-3">
@@ -611,16 +750,77 @@ function NewSubmission() {
                 ))}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">References</label>
-                <textarea
-                  value={step3Data.references}
-                  onChange={(e) => setStep3Data({ ...step3Data, references: e.target.value })}
-                  rows={4}
-                  placeholder="List your references here..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-outlook-blue"
-                />
-              </div>
+     
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">References</label>
+  <div className="mb-3">
+  <ReactQuill
+  theme="snow"
+  value={step3Data.referenceInput}
+  onChange={(content) => {
+    setStep3Data(prev => ({ ...prev, referenceInput: content }));
+  }}
+  modules={{
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered'}],
+      ['link'],
+      ['clean']
+    ]
+  }}
+  placeholder="Enter a reference and click Add..."
+  className="bg-white"
+  style={{ height: '100px', marginBottom: '50px' }}
+/>
+  </div>
+  
+ <button
+  type="button"
+  onClick={addReference}
+  className="mb-4 bg-outlook-blue text-white px-4 py-2 rounded-lg hover:bg-outlook-darkBlue text-sm"
+>
+  + Add Reference
+</button>
+  
+  {/* Debug info - remove this after testing */}
+  <div className="mb-2 text-xs text-gray-500">
+    Total References: {step3Data.references.length}
+  </div>
+  
+  {/* References List */}
+  {step3Data.references.length > 0 && (
+    <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+      {step3Data.references.map((reference, index) => (
+        <div
+          key={index}
+          className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <div className="flex-1 mr-3">
+            <span className="text-xs font-semibold text-gray-500 mr-2">[{index + 1}]</span>
+            <div 
+              className="inline text-sm text-gray-700"
+              dangerouslySetInnerHTML={{ __html: reference }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => removeReference(index)}
+            className="text-red-600 hover:text-red-700 flex-shrink-0"
+          >
+            <FaTimes />
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+  
+  {/* Show message when no references */}
+  {step3Data.references.length === 0 && (
+    <div className="text-sm text-gray-500 italic mt-2">
+      No references added yet
+    </div>
+  )}
+</div>
 
               <div className="flex justify-between">
                 <button

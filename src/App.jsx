@@ -12,6 +12,8 @@ import ReviewerDashboard from './pages/ReviewerDashboard';
 import NewSubmission from './pages/NewSubmission';
 import SubmissionDetail from './pages/SubmissionDetail';
 import JournalView from './pages/JournalView';
+import JournalHomepage from './pages/journalSubdomain/JournalHomepage';
+import JournalDetail from './pages/journalSubdomain/JournalDetail';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -54,9 +56,11 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
+          <Route path="/" element={<JournalHomepage />} /> 
           {/* Dashboard Redirect */}
-          <Route path="/" element={<DashboardRedirect />} />
+          {/* <Route path="/" element={<DashboardRedirect />} /> */}
+          <Route path="/journals" element={<JournalHomepage />} />
+<Route path="/journals/:journalId" element={<JournalDetail />} />
 
           {/* Author Routes */}
           <Route
