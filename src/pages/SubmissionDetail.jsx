@@ -1,6 +1,12 @@
+// hey so now i want a functionality in author dashboard. the feature is chain like structure showing the reviewing process for the author's submission. right now like fifrst the author wlil submit the submission then the editor will review if the editor found somethign bad then the author will send the message from the dashboard to the author. now the author will make changes accordingly (edit the submition) , then the editor will review again if all check then the submition will forward to reviewer . now if the reviewer found the error thing the reviewer will communicate with the e .ditor right now there is no communication functionality between the editor and the author so built this one . And then the editor will send the same message to the author  
+
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
+import { FaEdit,FaUndo } from 'react-icons/fa';
+import { canEditSubmission,reviewerSendBack } from '../redux/slices/submissionSlice';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { 
   getSubmission,
   approveSubmission,
@@ -26,7 +32,7 @@ function SubmissionDetail() {
   const dispatch = useDispatch();
   
   const { user } = useSelector((state) => state.auth);
-  const { currentSubmission, isLoading } = useSelector((state) => state.submissions);
+  const { currentSubmission, isLoading, canEdit} = useSelector((state) => state.submissions);
   const { emails } = useSelector((state) => state.emails);
 
   const [showEmailComposer, setShowEmailComposer] = useState(false);
@@ -41,12 +47,30 @@ function SubmissionDetail() {
     dispatch(getSubmission(id));
     dispatch(getSubmissionEmails(id));
   }, [dispatch, id]);
-
+useEffect(() => {
+  if (user.role === 'author' && id) {
+    dispatch(canEditSubmission(id));
+  }
+}, [dispatch, id, user.role]);
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
   };
+// Add this handler function after other handlers
+const handleSendBack = async () => {
+  if (!actionNotes) {
+    toast.error('Please provide notes for the editor');
+    return;
+  }
 
+  const result = await dispatch(reviewerSendBack({ id, reviewerNotes: actionNotes }));
+  if (result.type === 'submissions/reviewerSendBack/fulfilled') {
+    toast.success('Submission sent back to editor');
+    setShowActionModal(null);
+    setActionNotes('');
+    dispatch(getSubmission(id));
+  }
+};
   const handleBack = () => {
     if (user.role === 'author') {
       navigate('/author/dashboard');
@@ -226,110 +250,140 @@ function SubmissionDetail() {
         {/* Left Panel - Submission Details */}
         <div className="flex-1 overflow-y-auto outlook-scrollbar p-6">
           {/* Status and Actions */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className={`status-badge ${badge.class} text-lg px-4 py-2`}>
-                  {badge.text}
-                </span>
-              </div>
-              {canShowActions() && (
-                <div className="flex space-x-3">
-                  {user.role === 'editor' && currentSubmission.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => setShowActionModal('approve')}
-                        className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                      >
-                        <FaCheck />
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        onClick={() => setShowActionModal('reject')}
-                        className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-                      >
-                        <FaBan />
-                        <span>Reject</span>
-                      </button>
-                    </>
-                  )}
-                  
-                  {user.role === 'editor' && currentSubmission.status === 'approved_by_editor' && (
-                    <button
-                      onClick={handleMoveToReviewer}
-                      className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <FaForward />
-                      <span>Move to Reviewer</span>
-                    </button>
-                  )}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+  <div className="flex items-center justify-between mb-6">
+    <div>
+      <span className={`status-badge ${badge.class} text-lg px-4 py-2`}>
+        {badge.text}
+      </span>
+    </div>
+    <div className="flex space-x-3">
+      {/* Edit Button for Author */}
+      {user.role === 'author' && canEdit && (
+        <button
+          onClick={() => navigate(`/author/edit-submission/${id}`)}
+          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          <FaEdit />
+          <span>Edit Submission</span>
+        </button>
+      )}
 
-                  {user.role === 'editor' && currentSubmission.status === 'approved_by_reviewer' && (
-                    <button
-                      onClick={() => setShowActionModal('schedule')}
-                      className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <FaCalendar />
-                      <span>Schedule Publication</span>
-                    </button>
-                  )}
+      {/* Editor/Reviewer Actions */}
+      {canShowActions() && (
+        <>
+          {user.role === 'editor' && currentSubmission.status === 'pending' && (
+            <>
+              <button
+                onClick={() => setShowActionModal('approve')}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <FaCheck />
+                <span>Approve</span>
+              </button>
+              <button
+                onClick={() => setShowActionModal('reject')}
+                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <FaBan />
+                <span>Reject</span>
+              </button>
+            </>
+          )}
+          
+          {user.role === 'editor' && currentSubmission.status === 'approved_by_editor' && (
+            <button
+              onClick={handleMoveToReviewer}
+              className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <FaForward />
+              <span>Move to Reviewer</span>
+            </button>
+          )}
 
-                  {user.role === 'reviewer' && currentSubmission.status === 'with_reviewer' && (
-                    <>
-                      <button
-                        onClick={() => setShowActionModal('approve')}
-                        className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                      >
-                        <FaCheck />
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        onClick={() => setShowActionModal('reject')}
-                        className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-                      >
-                        <FaBan />
-                        <span>Reject</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+          {user.role === 'editor' && currentSubmission.status === 'approved_by_reviewer' && (
+            <button
+              onClick={() => setShowActionModal('schedule')}
+              className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <FaCalendar />
+              <span>Schedule Publication</span>
+            </button>
+          )}
 
-            {/* Submission Info */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Journal:</span>
-                <span className="ml-2 font-medium capitalize">{currentSubmission.journal}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Section:</span>
-                <span className="ml-2 font-medium">{currentSubmission.section}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Author:</span>
-                <span className="ml-2 font-medium">
-                  {currentSubmission.author?.firstName} {currentSubmission.author?.lastName}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-600">Submitted:</span>
-                <span className="ml-2 font-medium">
-                  {currentSubmission.submittedAt
-                    ? format(new Date(currentSubmission.submittedAt), 'MMM dd, yyyy')
-                    : 'Not submitted'}
-                </span>
-              </div>
-              {currentSubmission.publicationDate && (
-                <div>
-                  <span className="text-gray-600">Publication Date:</span>
-                  <span className="ml-2 font-medium">
-                    {format(new Date(currentSubmission.publicationDate), 'MMM dd, yyyy')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+      {user.role === 'reviewer' && currentSubmission.status === 'with_reviewer' && (
+  <>
+    <button
+      onClick={() => setShowActionModal('approve')}
+      className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+    >
+      <FaCheck />
+      <span>Approve</span>
+    </button>
+    <button
+      onClick={() => setShowActionModal('reject')}
+      className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+    >
+      <FaBan />
+      <span>Reject</span>
+    </button>
+    <button
+      onClick={() => setShowActionModal('sendback')}
+      className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+    >
+      <FaUndo />
+      <span>Send Back to Editor</span>
+    </button>
+  </>
+)}
+        </>
+      )}
+    </div>
+  </div>
+
+  {/* Show edit hint for rejected submissions */}
+  {user.role === 'author' && canEdit && currentSubmission.status.includes('rejected') && (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+      <p className="text-sm text-yellow-800">
+        <strong>Your submission was rejected.</strong> You can edit and resubmit it using the Edit button above.
+      </p>
+    </div>
+  )}
+
+  {/* Submission Info */}
+  <div className="grid grid-cols-2 gap-4 text-sm">
+    <div>
+      <span className="text-gray-600">Journal:</span>
+      <span className="ml-2 font-medium capitalize">{currentSubmission.journal}</span>
+    </div>
+    <div>
+      <span className="text-gray-600">Section:</span>
+      <span className="ml-2 font-medium">{currentSubmission.section}</span>
+    </div>
+    <div>
+      <span className="text-gray-600">Author:</span>
+      <span className="ml-2 font-medium">
+        {currentSubmission.author?.firstName} {currentSubmission.author?.lastName}
+      </span>
+    </div>
+    <div>
+      <span className="text-gray-600">Submitted:</span>
+      <span className="ml-2 font-medium">
+        {currentSubmission.submittedAt
+          ? format(new Date(currentSubmission.submittedAt), 'MMM dd, yyyy')
+          : 'Not submitted'}
+      </span>
+    </div>
+    {currentSubmission.publicationDate && (
+      <div>
+        <span className="text-gray-600">Publication Date:</span>
+        <span className="ml-2 font-medium">
+          {format(new Date(currentSubmission.publicationDate), 'MMM dd, yyyy')}
+        </span>
+      </div>
+    )}
+  </div>
+</div>
 
           {/* Article Details */}
           <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -382,6 +436,33 @@ function SubmissionDetail() {
                 <p className="text-red-700">{currentSubmission.rejectionReason}</p>
               </div>
             )}
+            {/* Show Reviewer Notes for Editor */}
+{user.role === 'editor' && currentSubmission.reviewerNotes && currentSubmission.status === 'approved_by_editor' && (
+  <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4">
+    <h3 className="font-semibold text-orange-800 mb-2 flex items-center">
+      <FaUndo className="mr-2" />
+      Reviewer's Notes - Changes Required
+    </h3>
+    <div 
+      className="text-orange-900 prose max-w-none"
+      dangerouslySetInnerHTML={{ __html: currentSubmission.reviewerNotes }}
+    />
+    <p className="text-sm text-orange-700 mt-3 italic">
+      The reviewer has sent this submission back for your review. Please check the notes above and take appropriate action.
+    </p>
+  </div>
+)}
+
+{/* Show Reviewer Notes in General (for all roles after review) */}
+{currentSubmission.reviewerNotes && currentSubmission.status !== 'approved_by_editor' && (
+  <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h3 className="font-semibold text-blue-800 mb-2">Reviewer's Notes</h3>
+    <div 
+      className="text-blue-900 prose max-w-none"
+      dangerouslySetInnerHTML={{ __html: currentSubmission.reviewerNotes }}
+    />
+  </div>
+)}
           </div>
         </div>
 
@@ -496,71 +577,98 @@ function SubmissionDetail() {
         )}
       </div>
 
-      {/* Action Modals */}
-      {showActionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold mb-4 capitalize">
-              {showActionModal} Submission
-            </h3>
-            
-            {showActionModal === 'schedule' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Publication Date
-                </label>
-                <input
-                  type="date"
-                  value={publicationDate}
-                  onChange={(e) => setPublicationDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {showActionModal === 'reject' ? 'Rejection Reason *' : 'Notes (Optional)'}
-                </label>
-                <textarea
-                  value={actionNotes}
-                  onChange={(e) => setActionNotes(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder={showActionModal === 'reject' ? 'Please provide detailed feedback...' : 'Add any notes...'}
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowActionModal(null);
-                  setActionNotes('');
-                  setPublicationDate('');
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={
-                  showActionModal === 'approve' ? handleApprove :
-                  showActionModal === 'reject' ? handleReject :
-                  handleSchedule
-                }
-                className={`px-4 py-2 rounded-lg text-white ${
-                  showActionModal === 'approve' ? 'bg-green-600 hover:bg-green-700' :
-                  showActionModal === 'reject' ? 'bg-red-600 hover:bg-red-700' :
-                  'bg-indigo-600 hover:bg-indigo-700'
-                }`}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
+  {showActionModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <h3 className="text-xl font-semibold mb-4 capitalize">
+        {showActionModal === 'sendback' ? 'Send Back to Editor' : 
+         showActionModal === 'schedule' ? 'Schedule Publication' : 
+         `${showActionModal} Submission`}
+      </h3>
+      
+      {showActionModal === 'schedule' ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Publication Date
+          </label>
+          <input
+            type="date"
+            value={publicationDate}
+            onChange={(e) => setPublicationDate(e.target.value)}
+            min={new Date().toISOString().split('T')[0]}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
+      ) : showActionModal === 'sendback' ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notes for Editor *
+          </label>
+          <p className="text-sm text-gray-500 mb-3">
+            Please explain what changes or corrections are needed in the submission.
+          </p>
+          <ReactQuill
+            theme="snow"
+            value={actionNotes}
+            onChange={setActionNotes}
+            modules={{
+              toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['clean']
+              ]
+            }}
+            placeholder="Enter detailed notes about required changes..."
+            style={{ height: '200px', marginBottom: '50px' }}
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {showActionModal === 'reject' ? 'Rejection Reason *' : 'Notes (Optional)'}
+          </label>
+          <textarea
+            value={actionNotes}
+            onChange={(e) => setActionNotes(e.target.value)}
+            rows={6}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            placeholder={showActionModal === 'reject' ? 'Please provide detailed feedback...' : 'Add any notes...'}
+          />
         </div>
       )}
+
+      <div className="flex justify-end space-x-3 mt-6">
+        <button
+          onClick={() => {
+            setShowActionModal(null);
+            setActionNotes('');
+            setPublicationDate('');
+          }}
+          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={
+            showActionModal === 'approve' ? handleApprove :
+            showActionModal === 'reject' ? handleReject :
+            showActionModal === 'sendback' ? handleSendBack :
+            handleSchedule
+          }
+          className={`px-4 py-2 rounded-lg text-white ${
+            showActionModal === 'approve' ? 'bg-green-600 hover:bg-green-700' :
+            showActionModal === 'reject' ? 'bg-red-600 hover:bg-red-700' :
+            showActionModal === 'sendback' ? 'bg-orange-600 hover:bg-orange-700' :
+            'bg-indigo-600 hover:bg-indigo-700'
+          }`}
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import SubmissionDetail from './pages/SubmissionDetail';
 import JournalView from './pages/JournalView';
 import JournalHomepage from './pages/journalSubdomain/JournalHomepage';
 import JournalDetail from './pages/journalSubdomain/JournalDetail';
+import EditSubmission from './pages/EditSubmission';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -79,6 +80,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/author/edit-submission/:id"
+  element={
+    <ProtectedRoute allowedRoles={['author']}>
+      <EditSubmission />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/submission/:id"
             element={

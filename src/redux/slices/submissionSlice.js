@@ -18,6 +18,7 @@ const initialState = {
   isError: false,
   isSuccess: false,
   message: '',
+  canEdit: false,
 };
 
 // Create submission
@@ -225,7 +226,70 @@ export const reviewerReject = createAsyncThunk(
     }
   }
 );
+export const updateSubmissionMetadata = createAsyncThunk(
+  'submissions/updateMetadata',
+  async ({ id, metadata }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const response = await axios.put(`${API_URL}/${id}/update-metadata`, metadata, getConfig(token));
+      return response.data.data.submission;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+export const updateSubmissionDocument = createAsyncThunk(
+  'submissions/updateDocument',
+  async ({ id, file }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const formData = new FormData();
+      formData.append('document', file);
+      
+      const response = await axios.put(
+        `${API_URL}/${id}/update-document`,
+        formData,
+        {
+          ...getConfig(token),
+          headers: {
+            ...getConfig(token).headers,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      return response.data.data.submission;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 
+export const canEditSubmission = createAsyncThunk(
+  'submissions/canEdit',
+  async (id, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const response = await axios.get(`${API_URL}/${id}/can-edit`, getConfig(token));
+      return response.data.data.canEdit;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+// Reviewer send back to editor
+export const reviewerSendBack = createAsyncThunk(
+  'submissions/reviewerSendBack',
+  async ({ id, reviewerNotes }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const response = await axios.put(`${REVIEWER_URL}/submissions/${id}/send-back`, { reviewerNotes }, getConfig(token));
+      return response.data.data.submission;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 const submissionSlice = createSlice({
   name: 'submissions',
   initialState,
@@ -293,7 +357,50 @@ const submissionSlice = createSlice({
       .addCase(confirmSubmission.fulfilled, (state, action) => {
         state.currentSubmission = action.payload;
         state.isSuccess = true;
-      });
+      })
+      .addCase(updateSubmissionMetadata.pending, (state) => {
+  state.isLoading = true;
+})
+.addCase(updateSubmissionMetadata.fulfilled, (state, action) => {
+  state.isLoading = false;
+  state.isSuccess = true;
+  state.currentSubmission = action.payload;
+})
+.addCase(updateSubmissionMetadata.rejected, (state, action) => {
+  state.isLoading = false;
+  state.isError = true;
+  state.message = action.payload;
+})
+.addCase(updateSubmissionDocument.pending, (state) => {
+  state.isLoading = true;
+})
+.addCase(updateSubmissionDocument.fulfilled, (state, action) => {
+  state.isLoading = false;
+  state.isSuccess = true;
+  state.currentSubmission = action.payload;
+})
+.addCase(updateSubmissionDocument.rejected, (state, action) => {
+  state.isLoading = false;
+  state.isError = true;
+  state.message = action.payload;
+})
+.addCase(canEditSubmission.fulfilled, (state, action) => {
+  state.canEdit = action.payload;
+})
+.addCase(reviewerSendBack.pending, (state) => {
+  state.isLoading = true;
+})
+.addCase(reviewerSendBack.fulfilled, (state, action) => {
+  state.isLoading = false;
+  state.isSuccess = true;
+  state.currentSubmission = action.payload;
+})
+.addCase(reviewerSendBack.rejected, (state, action) => {
+  state.isLoading = false;
+  state.isError = true;
+  state.message = action.payload;
+});
+      
   },
 });
 
