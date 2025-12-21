@@ -15,7 +15,8 @@ function JournalHomepage() {
     JHS: { gradient: 'from-[#FDB913] to-[#F5A800]', accent: 'bg-[#FDB913]', light: 'bg-yellow-50' },
     IJCR: { gradient: 'from-[#1B7A9C] to-teal-600', accent: 'bg-teal-500', light: 'bg-teal-50' },
     IJSR: { gradient: 'from-[#1B7A9C] to-cyan-600', accent: 'bg-cyan-500', light: 'bg-cyan-50' },
-    JAT: { gradient: 'from-[#FDB913] to-amber-500', accent: 'bg-amber-500', light: 'bg-amber-50' }
+    JAT: { gradient: 'from-[#FDB913] to-amber-500', accent: 'bg-amber-500', light: 'bg-amber-50' },
+    IJPPi:{ gradient: 'from-[#1B7A9C] to-[#156680]', accent: 'bg-[#1B7A9C]', light: 'bg-teal-50' }
   };
 
   useEffect(() => {

@@ -822,112 +822,182 @@ const InstructionsPage = ({ journal, colors }) => (
 );
 
 // Contact Page
-const ContactPage = ({ journal, colors }) => (
-  <div className="space-y-8">
-    <div className="animate-slide-in-left">
-      <h1 className="text-5xl font-black text-gray-900 mb-2">Contact Us</h1>
-      <p className="text-xl text-gray-600">Get in touch with our editorial team</p>
-    </div>
+// Contact Page - Replace the existing ContactPage component with this
+const ContactPage = ({ journal, colors }) => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    subject: '',
+    message: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
-    <div className="grid lg:grid-cols-2 gap-8">
-      <div className="space-y-6 animate-fade-in-up">
-        <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Editorial Office</h2>
-          <div className="space-y-4">
-            {journal.contact?.email && (
-              <div className="flex items-start space-x-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
-                  <Mail className="w-6 h-6 text-white" />
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setErrorMessage('Please login to send a message');
+      setLoading(false);
+      setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
+
+    try {
+      const response = await axios.post('/api/author/contact', formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success) {
+        setSuccessMessage(response.data.message);
+        setFormData({ subject: '', message: '' });
+      }
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || 'Failed to send message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="animate-slide-in-left">
+        <h1 className="text-5xl font-black text-gray-900 mb-2">Contact Us</h1>
+        <p className="text-xl text-gray-600">Get in touch with our editorial team</p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        <div className="space-y-6 animate-fade-in-up">
+          <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Editorial Office</h2>
+            <div className="space-y-4">
+              {journal.contact?.email && (
+                <div className="flex items-start space-x-4">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                    <Mail className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Email</div>
+                    <a href={`mailto:${journal.contact.email}`} className={`${colors.text} font-medium hover:underline`}>
+                      {journal.contact.email}
+                    </a>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Email</div>
-                  <a href={`mailto:${journal.contact.email}`} className={`${colors.text} font-medium hover:underline`}>
-                    {journal.contact.email}
-                  </a>
+              )}
+              {journal.contact?.phone && (
+                <div className="flex items-start space-x-4">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                    <Mail className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Phone</div>
+                    <span className="text-gray-900 font-medium">{journal.contact.phone}</span>
+                  </div>
                 </div>
-              </div>
-            )}
-            {journal.contact?.phone && (
-              <div className="flex items-start space-x-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
-                  <Mail className="w-6 h-6 text-white" />
+              )}
+              {journal.contact?.address && (
+                <div className="flex items-start space-x-4">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                    <Globe className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Address</div>
+                    <span className="text-gray-900 font-medium">{journal.contact.address}</span>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Phone</div>
-                  <span className="text-gray-900 font-medium">{journal.contact.phone}</span>
-                </div>
-              </div>
-            )}
-            {journal.contact?.address && (
-              <div className="flex items-start space-x-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
-                  <Globe className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Address</div>
-                  <span className="text-gray-900 font-medium">{journal.contact.address}</span>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
+
+          <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-8 shadow-2xl`}>
+            <Sparkles className="w-10 h-10 text-white mb-4 animate-pulse" />
+            <h3 className="text-2xl font-bold text-white mb-3">Have Questions?</h3>
+            <p className="text-white/90 mb-4">Our editorial team is here to help with any inquiries about submissions, peer review, or publication.</p>
+            <div className="bg-white/20 backdrop-blur-md px-4 py-3 rounded-xl border border-white/30">
+              <p className="text-white text-sm">💡 You need to be logged in to send us a message</p>
+            </div>
           </div>
         </div>
 
-        <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-8 shadow-2xl`}>
-          <Sparkles className="w-10 h-10 text-white mb-4 animate-pulse" />
-          <h3 className="text-2xl font-bold text-white mb-3">Have Questions?</h3>
-          <p className="text-white/90 mb-4">Our editorial team is here to help with any inquiries about submissions, peer review, or publication.</p>
-          <button className="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-xl font-bold transition-all backdrop-blur-md border border-white/30 hover:scale-105">
-            Send Message
-          </button>
+        <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg animate-slide-in-right">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Us a Message</h2>
+          
+          {successMessage && (
+            <div className="mb-4 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+              <p className="text-green-700 font-medium">{successMessage}</p>
+            </div>
+          )}
+          
+          {errorMessage && (
+            <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+              <p className="text-red-700 font-medium">{errorMessage}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+              <input 
+                type="text"
+                name="subject"
+                value={formData.subject}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors disabled:opacity-50"
+                placeholder="How can we help?"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Message *</label>
+              <textarea 
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                rows="7"
+                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors resize-none disabled:opacity-50"
+                placeholder="Your message..."
+              ></textarea>
+            </div>
+            <button 
+              type="submit"
+              disabled={loading}
+              className={`w-full bg-gradient-to-r ${colors.gradient} text-white px-6 py-4 rounded-xl font-bold hover:scale-105 transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2`}
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Sending...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-5 h-5" />
+                  <span>Send Message</span>
+                </>
+              )}
+            </button>
+          </form>
         </div>
       </div>
-
-      <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg animate-slide-in-right">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Us a Message</h2>
-        <form className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-            <input 
-              type="text" 
-              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors"
-              placeholder="Your name"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input 
-              type="email" 
-              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors"
-              placeholder="your.email@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-            <input 
-              type="text" 
-              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors"
-              placeholder="How can we help?"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-            <textarea 
-              rows="5"
-              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors resize-none"
-              placeholder="Your message..."
-            ></textarea>
-          </div>
-          <button 
-            type="submit"
-            className={`w-full bg-gradient-to-r ${colors.gradient} text-white px-6 py-4 rounded-xl font-bold hover:scale-105 transition-all shadow-xl`}
-          >
-            Send Message
-          </button>
-        </form>
-      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Editorial Board Page
 const EditorialBoardPage = ({ journal, colors }) => (
