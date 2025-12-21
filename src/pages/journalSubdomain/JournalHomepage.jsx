@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, ChevronRight, Award, Users, TrendingUp, FileText } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 
 function JournalHomepage() {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ function JournalHomepage() {
 
   const fetchJournals = async () => {
     try {
-      const response = await axios.get('/api/journals');
+      const response = await api.get('/api/journals');
       if (response.data.success) {
         setJournals(response.data.data.journals);
       }

@@ -84,7 +84,7 @@ useEffect(() => {
       setTimeout(() => setShowScreenshotWarning(false), 3000);
       
       // Log screenshot attempt to backend
-      fetch(`/api/submissions/${id}/log-screenshot-attempt`, {
+      fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/log-screenshot-attempt`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -151,7 +151,7 @@ const handleOpenPdf = async () => {
     
     if (isDocx) {
       // For DOCX files, trigger download instead of viewing
-      const response = await fetch(`/api/submissions/${id}/stream-document`, {
+      const response = await fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/stream-document`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -176,7 +176,7 @@ const handleOpenPdf = async () => {
       }
     } else {
       // For PDF files, open in viewer
-      const response = await fetch(`/api/submissions/${id}/stream-document`, {
+      const response = await fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/stream-document`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

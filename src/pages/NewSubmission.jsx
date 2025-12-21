@@ -12,7 +12,7 @@ import { toast } from 'react-toastify';
 import { FaArrowLeft, FaArrowRight, FaCheck, FaUpload, FaTimes, FaSpinner } from 'react-icons/fa';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-
+import api from '../utils/api';
 const STEPS = [
   { number: 1, title: 'Start', description: 'Basic information' },
   { number: 2, title: 'Upload', description: 'Document upload' },
@@ -77,7 +77,7 @@ function NewSubmission() {
     setLoadingSuggestions(true);
     try {
       // Call your API or use a service to get keyword suggestions
-      const response = await axios.get(`/api/keywords/suggestions`, {
+      const response = await api.get(`/api/keywords/suggestions`, {
         params: {
           journal: step1Data.journal,
           query: query

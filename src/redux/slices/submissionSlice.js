@@ -1,6 +1,6 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from "../../utils/api"
 
 const API_URL = '/api/submissions';
 const EDITOR_URL = '/api/editor';
@@ -27,7 +27,7 @@ export const createSubmission = createAsyncThunk(
   async (data, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.post(API_URL, data, getConfig(token));
+      const response = await api.post(API_URL, data, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -44,7 +44,7 @@ export const uploadDocument = createAsyncThunk(
       const formData = new FormData();
       formData.append('document', file);
       
-      const response = await axios.post(
+      const response = await api.post(
         `${API_URL}/${id}/upload`,
         formData,
         {
@@ -68,7 +68,7 @@ export const addMetadata = createAsyncThunk(
   async ({ id, metadata }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${API_URL}/${id}/metadata`, metadata, getConfig(token));
+      const response = await api.put(`${API_URL}/${id}/metadata`, metadata, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -82,7 +82,7 @@ export const confirmSubmission = createAsyncThunk(
   async (id, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${API_URL}/${id}/confirm`, {}, getConfig(token));
+      const response = await api.put(`${API_URL}/${id}/confirm`, {}, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -96,7 +96,7 @@ export const getMySubmissions = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.get(`${API_URL}/my-submissions`, getConfig(token));
+      const response = await api.get(`${API_URL}/my-submissions`, getConfig(token));
       return response.data.data.submissions;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -110,7 +110,7 @@ export const getSubmission = createAsyncThunk(
   async (id, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.get(`${API_URL}/${id}`, getConfig(token));
+      const response = await api.get(`${API_URL}/${id}`, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -125,7 +125,7 @@ export const getSubmissionsByJournal = createAsyncThunk(
     try {
       const token = thunkAPI.getState().auth.token;
       const query = status ? `?status=${status}` : '';
-      const response = await axios.get(`${API_URL}/journal/${journal}${query}`, getConfig(token));
+      const response = await api.get(`${API_URL}/journal/${journal}${query}`, getConfig(token));
       return response.data.data.submissions;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -139,7 +139,7 @@ export const getJournalStats = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.get(`${API_URL}/stats/journals`, getConfig(token));
+      const response = await api.get(`${API_URL}/stats/journals`, getConfig(token));
       return response.data.data.stats;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -153,7 +153,7 @@ export const approveSubmission = createAsyncThunk(
   async ({ id, editorNotes }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${EDITOR_URL}/submissions/${id}/approve`, { editorNotes }, getConfig(token));
+      const response = await api.put(`${EDITOR_URL}/submissions/${id}/approve`, { editorNotes }, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -166,7 +166,7 @@ export const rejectSubmission = createAsyncThunk(
   async ({ id, rejectionReason }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${EDITOR_URL}/submissions/${id}/reject`, { rejectionReason }, getConfig(token));
+      const response = await api.put(`${EDITOR_URL}/submissions/${id}/reject`, { rejectionReason }, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -179,7 +179,7 @@ export const moveToReviewer = createAsyncThunk(
   async (id, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${EDITOR_URL}/submissions/${id}/move-to-reviewer`, {}, getConfig(token));
+      const response = await api.put(`${EDITOR_URL}/submissions/${id}/move-to-reviewer`, {}, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -192,7 +192,7 @@ export const schedulePublication = createAsyncThunk(
   async ({ id, publicationDate }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${EDITOR_URL}/submissions/${id}/schedule`, { publicationDate }, getConfig(token));
+      const response = await api.put(`${EDITOR_URL}/submissions/${id}/schedule`, { publicationDate }, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -206,7 +206,7 @@ export const reviewerApprove = createAsyncThunk(
   async ({ id, reviewerNotes }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${REVIEWER_URL}/submissions/${id}/approve`, { reviewerNotes }, getConfig(token));
+      const response = await api.put(`${REVIEWER_URL}/submissions/${id}/approve`, { reviewerNotes }, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -219,7 +219,7 @@ export const reviewerReject = createAsyncThunk(
   async ({ id, rejectionReason }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${REVIEWER_URL}/submissions/${id}/reject`, { rejectionReason }, getConfig(token));
+      const response = await api.put(`${REVIEWER_URL}/submissions/${id}/reject`, { rejectionReason }, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -231,7 +231,7 @@ export const updateSubmissionMetadata = createAsyncThunk(
   async ({ id, metadata }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${API_URL}/${id}/update-metadata`, metadata, getConfig(token));
+      const response = await api.put(`${API_URL}/${id}/update-metadata`, metadata, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -246,7 +246,7 @@ export const updateSubmissionDocument = createAsyncThunk(
       const formData = new FormData();
       formData.append('document', file);
       
-      const response = await axios.put(
+      const response = await api.put(
         `${API_URL}/${id}/update-document`,
         formData,
         {
@@ -269,7 +269,7 @@ export const canEditSubmission = createAsyncThunk(
   async (id, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.get(`${API_URL}/${id}/can-edit`, getConfig(token));
+      const response = await api.get(`${API_URL}/${id}/can-edit`, getConfig(token));
       return response.data.data.canEdit;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -283,7 +283,7 @@ export const reviewerSendBack = createAsyncThunk(
   async ({ id, reviewerNotes }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${REVIEWER_URL}/submissions/${id}/send-back`, { reviewerNotes }, getConfig(token));
+      const response = await api.put(`${REVIEWER_URL}/submissions/${id}/send-back`, { reviewerNotes }, getConfig(token));
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -295,7 +295,7 @@ export const editorSendBack = createAsyncThunk(
   async ({ id, editorNotes }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(
+      const response = await api.put(
         `${EDITOR_URL}/submissions/${id}/send-back`, 
         { editorNotes }, 
         getConfig(token)

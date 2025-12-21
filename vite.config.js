@@ -5,11 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    proxy: {
-      '/api': {
-        target: 'https://ms-publication-backend.onrender.com',
-        changeOrigin: true
-      }
-    }
+    // proxy: {
+    //   '/api': {
+    //     target: 'https://ms-publication-backend.onrender.com',
+    //     changeOrigin: true
+    //   }
+    // }
   }
 })

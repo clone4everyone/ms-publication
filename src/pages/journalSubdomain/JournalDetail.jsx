@@ -6,7 +6,7 @@ import {
   Archive, FileText, Send, Award, TrendingUp, Eye,
   Download, Share2, Star, Sparkles, Zap, Globe
 } from 'lucide-react';
-import axios from 'axios';
+import api from "../../utils/api"
 import logo from "../../../public/ms-logo.png"
 function JournalDetail() {
   const { journalId } = useParams();
@@ -88,7 +88,7 @@ function JournalDetail() {
 
   const fetchJournalDetails = async () => {
     try {
-      const response = await axios.get(`/api/journals/${journalId}`);
+      const response = await api.get(`/api/journals/${journalId}`);
       if (response.data.success) {
         setJournal(response.data.data.journal);
       }
@@ -856,7 +856,7 @@ const ContactPage = ({ journal, colors }) => {
     }
 
     try {
-      const response = await axios.post('/api/author/contact', formData, {
+      const response = await api.post('/api/author/contact', formData, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -52,7 +52,7 @@ function AuthorDashboard() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/auth/change-password', {
+      const response = await fetch('https://ms-publication-backend.onrender.com/api/auth/change-password', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

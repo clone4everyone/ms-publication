@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '../../utils/api';
 
 const API_URL = '/api/emails';
 
@@ -33,7 +33,7 @@ export const sendEmail = createAsyncThunk(
         });
       }
 
-      const response = await axios.post(
+      const response = await api.post(
         `${API_URL}/send`,
         formData,
         {
@@ -57,7 +57,7 @@ export const getSubmissionEmails = createAsyncThunk(
   async (submissionId, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.get(`${API_URL}/submission/${submissionId}`, getConfig(token));
+      const response = await api.get(`${API_URL}/submission/${submissionId}`, getConfig(token));
       return response.data.data.emails;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -71,7 +71,7 @@ export const markAsRead = createAsyncThunk(
   async (emailId, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.put(`${API_URL}/${emailId}/read`, {}, getConfig(token));
+      const response = await api.put(`${API_URL}/${emailId}/read`, {}, getConfig(token));
       return response.data.data.email;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
@@ -85,7 +85,7 @@ export const getUnreadCount = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await axios.get(`${API_URL}/unread/count`, getConfig(token));
+      const response = await api.get(`${API_URL}/unread/count`, getConfig(token));
       return response.data.data.count;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
