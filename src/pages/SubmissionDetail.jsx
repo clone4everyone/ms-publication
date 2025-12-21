@@ -1,12 +1,11 @@
-// hey so now i want a functionality in author dashboard. the feature is chain like structure showing the reviewing process for the author's submission. right now like fifrst the author wlil submit the submission then the editor will review if the editor found somethign bad then the author will send the message from the dashboard to the author. now the author will make changes accordingly (edit the submition) , then the editor will review again if all check then the submition will forward to reviewer . now if the reviewer found the error thing the reviewer will communicate with the e .ditor right now there is no communication functionality between the editor and the author so built this one . And then the editor will send the same message to the author  
-
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaEdit,FaUndo } from 'react-icons/fa';
-import { canEditSubmission,reviewerSendBack } from '../redux/slices/submissionSlice';
+import { FaEdit, FaUndo } from 'react-icons/fa';
+import { canEditSubmission, reviewerSendBack, editorSendBack   } from '../redux/slices/submissionSlice';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import SubmissionTimeline from '../components/SubmissionTimeline';
 import { 
   getSubmission,
   approveSubmission,
@@ -22,7 +21,7 @@ import { toast } from 'react-toastify';
 import { 
   FaArrowLeft, FaSignOutAlt, FaUser, FaDownload, FaEnvelope,
   FaPaperPlane, FaImage, FaTimes, FaCheck, FaBan, FaForward,
-  FaCalendar, FaClock
+  FaCalendar, FaClock, FaBook, FaFileAlt
 } from 'react-icons/fa';
 import { format } from 'date-fns';
 
@@ -34,7 +33,8 @@ function SubmissionDetail() {
   const { user } = useSelector((state) => state.auth);
   const { currentSubmission, isLoading, canEdit} = useSelector((state) => state.submissions);
   const { emails } = useSelector((state) => state.emails);
-
+const [showPdfViewer, setShowPdfViewer] = useState(false);
+const [pdfUrl, setPdfUrl] = useState(null);
   const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
@@ -42,35 +42,184 @@ function SubmissionDetail() {
   const [showActionModal, setShowActionModal] = useState(null);
   const [actionNotes, setActionNotes] = useState('');
   const [publicationDate, setPublicationDate] = useState('');
+const [watermarkPosition, setWatermarkPosition] = useState({ x: 50, y: 50 });
+const [showScreenshotWarning, setShowScreenshotWarning] = useState(false);
 
   useEffect(() => {
     dispatch(getSubmission(id));
     dispatch(getSubmissionEmails(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (user.role === 'author' && id) {
+      dispatch(canEditSubmission(id));
+    }
+  }, [dispatch, id, user.role]);
+
+// Add this useEffect to detect screenshot attempts and move watermark
 useEffect(() => {
-  if (user.role === 'author' && id) {
-    dispatch(canEditSubmission(id));
-  }
-}, [dispatch, id, user.role]);
+  if (!showPdfViewer || user.role !== 'reviewer') return;
+
+  // Move watermark randomly
+  const moveWatermark = setInterval(() => {
+    setWatermarkPosition({
+      x: Math.random() * 80 + 10,
+      y: Math.random() * 80 + 10
+    });
+  }, 100000);
+
+  // Detect screenshot attempts (keyboard shortcuts)
+  const detectScreenshot = (e) => {
+    // Windows: Win+Shift+S, PrtScn, Alt+PrtScn
+    // Mac: Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    
+    const screenshotKeys = isMac 
+      ? ((e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5')) || e.key === 'PrintScreen')
+      : ((e.key === 'PrintScreen') || (e.metaKey && e.shiftKey && e.key === 'S'));
+
+    if (screenshotKeys) {
+      e.preventDefault();
+      setShowScreenshotWarning(true);
+      setTimeout(() => setShowScreenshotWarning(false), 3000);
+      
+      // Log screenshot attempt to backend
+      fetch(`/api/submissions/${id}/log-screenshot-attempt`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+  };
+
+  // Detect when user leaves/returns to tab (common during screenshot)
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      // User might be taking screenshot
+      fetch(`/api/submissions/${id}/log-activity`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ activity: 'tab_hidden' })
+      });
+    }
+  };
+
+  document.addEventListener('keydown', detectScreenshot);
+  document.addEventListener('keyup', detectScreenshot);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    clearInterval(moveWatermark);
+    document.removeEventListener('keydown', detectScreenshot);
+    document.removeEventListener('keyup', detectScreenshot);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [showPdfViewer, user.role, id]);
+
+  // NEW: Handle editor send back to author
+  const handleEditorSendBack = async () => {
+    if (!actionNotes) {
+      toast.error('Please provide notes for the author');
+      return;
+    }
+
+    const result = await dispatch(editorSendBack({ id, editorNotes: actionNotes }));
+    if (result.type === 'submissions/editorSendBack/fulfilled') {
+      toast.success('Submission sent back to author for changes');
+      setShowActionModal(null);
+      setActionNotes('');
+      dispatch(getSubmission(id));
+    }
+  };
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
   };
-// Add this handler function after other handlers
-const handleSendBack = async () => {
-  if (!actionNotes) {
-    toast.error('Please provide notes for the editor');
-    return;
-  }
-
-  const result = await dispatch(reviewerSendBack({ id, reviewerNotes: actionNotes }));
-  if (result.type === 'submissions/reviewerSendBack/fulfilled') {
-    toast.success('Submission sent back to editor');
-    setShowActionModal(null);
-    setActionNotes('');
-    dispatch(getSubmission(id));
+  
+const handleOpenPdf = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Check file type first
+    const isDocx = currentSubmission.documentFile.filename.toLowerCase().endsWith('.docx') ||
+                   currentSubmission.documentFile.mimetype?.includes('wordprocessingml');
+    
+    if (isDocx) {
+      // For DOCX files, trigger download instead of viewing
+      const response = await fetch(`/api/submissions/${id}/stream-document`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        
+        // Create a temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentSubmission.documentFile.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast.info('DOCX file downloaded. Please open it in Microsoft Word or compatible software.');
+      } else {
+        toast.error('Failed to download document');
+      }
+    } else {
+      // For PDF files, open in viewer
+      const response = await fetch(`/api/submissions/${id}/stream-document`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      console.log(response);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setPdfUrl(url);
+        setShowPdfViewer(true);
+      } else {
+        toast.error('Failed to load document');
+      }
+    }
+  } catch (error) {
+    console.error('Error loading document:', error);
+    toast.error('Error loading document');
   }
 };
+
+const handleClosePdf = () => {
+  if (pdfUrl) {
+    URL.revokeObjectURL(pdfUrl);
+    setPdfUrl(null);
+  }
+  setShowPdfViewer(false);
+};
+
+  const handleSendBack = async () => {
+    if (!actionNotes) {
+      toast.error('Please provide notes for the editor');
+      return;
+    }
+
+    const result = await dispatch(reviewerSendBack({ id, reviewerNotes: actionNotes }));
+    if (result.type === 'submissions/reviewerSendBack/fulfilled') {
+      toast.success('Submission sent back to editor');
+      setShowActionModal(null);
+      setActionNotes('');
+      dispatch(getSubmission(id));
+    }
+  };
+
   const handleBack = () => {
     if (user.role === 'author') {
       navigate('/author/dashboard');
@@ -174,17 +323,17 @@ const handleSendBack = async () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      draft: { class: 'bg-gray-100 text-gray-800', text: 'Draft' },
-      pending: { class: 'bg-yellow-100 text-yellow-800', text: 'Pending Review' },
-      approved_by_editor: { class: 'bg-blue-100 text-blue-800', text: 'Approved by Editor' },
-      rejected_by_editor: { class: 'bg-red-100 text-red-800', text: 'Rejected' },
-      with_reviewer: { class: 'bg-purple-100 text-purple-800', text: 'With Reviewer' },
-      approved_by_reviewer: { class: 'bg-green-100 text-green-800', text: 'Approved' },
-      rejected_by_reviewer: { class: 'bg-red-100 text-red-800', text: 'Rejected' },
-      scheduled: { class: 'bg-indigo-100 text-indigo-800', text: 'Scheduled' },
-      published: { class: 'bg-emerald-100 text-emerald-800', text: 'Published' },
+      draft: { class: 'bg-slate-100 text-slate-700 border-slate-300', text: 'Draft', icon: FaFileAlt },
+      pending: { class: 'bg-amber-50 text-amber-700 border-amber-300', text: 'Pending Review', icon: FaClock },
+      approved_by_editor: { class: 'bg-sky-50 text-sky-700 border-sky-300', text: 'Approved by Editor', icon: FaCheck },
+      rejected_by_editor: { class: 'bg-rose-50 text-rose-700 border-rose-300', text: 'Rejected', icon: FaBan },
+      with_reviewer: { class: 'bg-violet-50 text-violet-700 border-violet-300', text: 'With Reviewer', icon: FaUser },
+      approved_by_reviewer: { class: 'bg-emerald-50 text-emerald-700 border-emerald-300', text: 'Approved', icon: FaCheck },
+      rejected_by_reviewer: { class: 'bg-rose-50 text-rose-700 border-rose-300', text: 'Rejected', icon: FaBan },
+      scheduled: { class: 'bg-indigo-50 text-indigo-700 border-indigo-300', text: 'Scheduled', icon: FaCalendar },
+      published: { class: 'bg-teal-50 text-teal-700 border-teal-300', text: 'Published', icon: FaBook },
     };
-    return statusMap[status] || { class: 'bg-gray-100 text-gray-800', text: status };
+    return statusMap[status] || { class: 'bg-slate-100 text-slate-700 border-slate-300', text: status, icon: FaFileAlt };
   };
 
   const canShowActions = () => {
@@ -202,45 +351,121 @@ const handleSendBack = async () => {
 
   if (isLoading || !currentSubmission) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-outlook-blue mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading submission...</p>
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 border-4 border-teal-200 rounded-full animate-ping"></div>
+            <div className="absolute inset-0 border-4 border-t-teal-600 border-r-amber-400 border-b-teal-600 border-l-amber-400 rounded-full animate-spin"></div>
+          </div>
+          <p className="text-lg font-medium text-gray-700 animate-pulse">Loading submission...</p>
         </div>
       </div>
     );
   }
 
   const badge = getStatusBadge(currentSubmission.status);
+  const StatusIcon = badge.icon;
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Top Header */}
-      <div className={`h-12 ${
-        user.role === 'editor' ? 'bg-outlook-blue' : 
-        user.role === 'reviewer' ? 'bg-purple-600' : 
-        'bg-green-600'
-      } flex items-center justify-between px-6 text-white shadow-md`}>
-        <div className="flex items-center space-x-4">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-teal-50">
+      <style>{`
+      @media print {
+  .no-print-for-reviewer {
+    display: none !important;
+  }
+}
+        @keyframes slideDown {
+          from { transform: translateY(-100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeInUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes shimmer {
+          0% { background-position: -1000px 0; }
+          100% { background-position: 1000px 0; }
+        }
+        .animate-slide-down { animation: slideDown 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.6s ease-out; }
+        .animate-scale-in { animation: scaleIn 0.4s ease-out; }
+        .animate-delay-100 { animation-delay: 0.1s; animation-fill-mode: both; }
+        .animate-delay-200 { animation-delay: 0.2s; animation-fill-mode: both; }
+        .animate-delay-300 { animation-delay: 0.3s; animation-fill-mode: both; }
+        .glass-morphism {
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .hover-lift {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hover-lift:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .gradient-border {
+          position: relative;
+          background: white;
+        }
+        .gradient-border::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          padding: 2px;
+          background: linear-gradient(135deg, #0d9488, #fbbf24);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+        }
+        .shimmer-bg {
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+          background-size: 200% 100%;
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
+
+      {/* Top Header with gradient */}
+      <div className={`h-16 bg-gradient-to-r ${
+        user.role === 'editor' ? 'from-teal-600 via-teal-700 to-teal-800' : 
+        user.role === 'reviewer' ? 'from-violet-600 via-purple-700 to-violet-800' : 
+        'from-emerald-600 via-teal-700 to-emerald-800'
+      } flex items-center justify-between px-8 text-white shadow-xl animate-slide-down`}>
+        <div className="flex items-center space-x-6">
           <button
             onClick={handleBack}
-            className="hover:bg-white/10 p-2 rounded transition-colors"
+            className="group flex items-center space-x-2 hover:bg-white/20 px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105"
           >
-            <FaArrowLeft className="w-4 h-4" />
+            <FaArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Back</span>
           </button>
-          <h1 className="text-lg font-semibold">Submission Details</h1>
+          <div className="h-10 w-px bg-white/30"></div>
+          <div className="flex items-center space-x-3">
+            <FaBook className="w-5 h-5" />
+            <h1 className="text-xl font-bold tracking-wide">Submission Details</h1>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <FaUser className="w-4 h-4" />
-            <span className="text-sm">{user?.firstName} {user?.lastName}</span>
+        <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-3 px-4 py-2 bg-white/10 rounded-lg">
+            <div className="w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center">
+              <FaUser className="w-4 h-4 text-teal-900" />
+            </div>
+            <div>
+              <div className="text-xs opacity-80">Signed in as</div>
+              <div className="text-sm font-semibold">{user?.firstName} {user?.lastName}</div>
+            </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-1 hover:bg-white/10 px-3 py-1 rounded transition-colors"
+            className="flex items-center space-x-2 hover:bg-white/20 px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105"
           >
             <FaSignOutAlt className="w-4 h-4" />
-            <span className="text-sm">Logout</span>
+            <span className="font-medium">Logout</span>
           </button>
         </div>
       </div>
@@ -248,165 +473,231 @@ const handleSendBack = async () => {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Submission Details */}
-        <div className="flex-1 overflow-y-auto outlook-scrollbar p-6">
-          {/* Status and Actions */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-  <div className="flex items-center justify-between mb-6">
-    <div>
-      <span className={`status-badge ${badge.class} text-lg px-4 py-2`}>
-        {badge.text}
-      </span>
-    </div>
-    <div className="flex space-x-3">
-      {/* Edit Button for Author */}
-      {user.role === 'author' && canEdit && (
-        <button
-          onClick={() => navigate(`/author/edit-submission/${id}`)}
-          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <FaEdit />
-          <span>Edit Submission</span>
-        </button>
-      )}
+        <div className="flex-1 overflow-y-auto p-8 space-y-6">
+          {/* Status Card */}
+          <div className="glass-morphism rounded-2xl shadow-xl p-8 animate-fade-in-up hover-lift">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center space-x-4">
+                <div className={`w-16 h-16 rounded-2xl ${badge.class.replace('bg-', 'bg-gradient-to-br from-').replace('text-', 'to-')} flex items-center justify-center shadow-lg`}>
+                  <StatusIcon className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Current Status</div>
+                  <span className={`inline-flex items-center space-x-2 ${badge.class} border-2 text-base font-bold px-6 py-2 rounded-xl`}>
+                    <StatusIcon className="w-4 h-4" />
+                    <span>{badge.text}</span>
+                  </span>
+                </div>
+              </div>
 
-      {/* Editor/Reviewer Actions */}
-      {canShowActions() && (
-        <>
-          {user.role === 'editor' && currentSubmission.status === 'pending' && (
-            <>
-              <button
-                onClick={() => setShowActionModal('approve')}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <FaCheck />
-                <span>Approve</span>
-              </button>
-              <button
-                onClick={() => setShowActionModal('reject')}
-                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <FaBan />
-                <span>Reject</span>
-              </button>
-            </>
-          )}
-          
-          {user.role === 'editor' && currentSubmission.status === 'approved_by_editor' && (
-            <button
-              onClick={handleMoveToReviewer}
-              className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <FaForward />
-              <span>Move to Reviewer</span>
-            </button>
-          )}
+              <div className="flex flex-wrap gap-3">
+                {/* Edit Button for Author */}
+                {user.role === 'author' && canEdit && (
+                  <button
+                    onClick={() => navigate(`/author/edit-submission/${id}`)}
+                    className="group flex items-center space-x-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    <FaEdit className="group-hover:rotate-12 transition-transform" />
+                    <span>Edit Submission</span>
+                  </button>
+                )}
 
-          {user.role === 'editor' && currentSubmission.status === 'approved_by_reviewer' && (
-            <button
-              onClick={() => setShowActionModal('schedule')}
-              className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <FaCalendar />
-              <span>Schedule Publication</span>
-            </button>
-          )}
+                {/* Editor/Reviewer Actions */}
+                {canShowActions() && (
+                  <>
+                    {user.role === 'editor' && currentSubmission.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => setShowActionModal('approve')}
+                          className="group flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                          <FaCheck className="group-hover:scale-125 transition-transform" />
+                          <span>Approve</span>
+                        </button>
+                        <button
+                          onClick={() => setShowActionModal('reject')}
+                          className="group flex items-center space-x-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                          <FaBan className="group-hover:rotate-180 transition-transform duration-500" />
+                          <span>Reject</span>
+                        </button>
+                         <button
+                          onClick={() => setShowActionModal('editor_sendback')}
+                          className="group flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                          <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
+                          <span>Send Back to Author</span>
+                        </button>
+                      </>
+                    )}
+                    
+                    {user.role === 'editor' && currentSubmission.status === 'approved_by_editor' && (
+                      <button
+                        onClick={handleMoveToReviewer}
+                        className="group flex items-center space-x-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                      >
+                        <FaForward className="group-hover:translate-x-1 transition-transform" />
+                        <span>Move to Reviewer</span>
+                      </button>
+                      
+                    )}
 
-      {user.role === 'reviewer' && currentSubmission.status === 'with_reviewer' && (
-  <>
-    <button
-      onClick={() => setShowActionModal('approve')}
-      className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-    >
-      <FaCheck />
-      <span>Approve</span>
-    </button>
-    <button
-      onClick={() => setShowActionModal('reject')}
-      className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-    >
-      <FaBan />
-      <span>Reject</span>
-    </button>
-    <button
-      onClick={() => setShowActionModal('sendback')}
-      className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
-    >
-      <FaUndo />
-      <span>Send Back to Editor</span>
-    </button>
-  </>
-)}
-        </>
-      )}
-    </div>
-  </div>
+                    {user.role === 'editor' && currentSubmission.status === 'approved_by_reviewer' && (
+                      <> <button
+                        onClick={() => setShowActionModal('schedule')}
+                        className="group flex items-center space-x-2 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                      >
+                        <FaCalendar className="group-hover:scale-110 transition-transform" />
+                        <span>Schedule Publication</span>
+                      </button>
+                                              {/* NEW: Can also send back after approval if needed */}
+                        <button
+                          onClick={() => setShowActionModal('editor_sendback')}
+                          className="group flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                          <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
+                          <span>Send Back to Author</span>
+                        </button>
 
-  {/* Show edit hint for rejected submissions */}
-  {user.role === 'author' && canEdit && currentSubmission.status.includes('rejected') && (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-      <p className="text-sm text-yellow-800">
-        <strong>Your submission was rejected.</strong> You can edit and resubmit it using the Edit button above.
-      </p>
-    </div>
-  )}
+                      </>
+                     
+                    )}
 
-  {/* Submission Info */}
-  <div className="grid grid-cols-2 gap-4 text-sm">
-    <div>
-      <span className="text-gray-600">Journal:</span>
-      <span className="ml-2 font-medium capitalize">{currentSubmission.journal}</span>
-    </div>
-    <div>
-      <span className="text-gray-600">Section:</span>
-      <span className="ml-2 font-medium">{currentSubmission.section}</span>
-    </div>
-    <div>
-      <span className="text-gray-600">Author:</span>
-      <span className="ml-2 font-medium">
-        {currentSubmission.author?.firstName} {currentSubmission.author?.lastName}
-      </span>
-    </div>
-    <div>
-      <span className="text-gray-600">Submitted:</span>
-      <span className="ml-2 font-medium">
-        {currentSubmission.submittedAt
-          ? format(new Date(currentSubmission.submittedAt), 'MMM dd, yyyy')
-          : 'Not submitted'}
-      </span>
-    </div>
-    {currentSubmission.publicationDate && (
-      <div>
-        <span className="text-gray-600">Publication Date:</span>
-        <span className="ml-2 font-medium">
-          {format(new Date(currentSubmission.publicationDate), 'MMM dd, yyyy')}
-        </span>
-      </div>
-    )}
-  </div>
-</div>
-
-          {/* Article Details */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {currentSubmission.metadata?.title}
-            </h2>
-            {currentSubmission.metadata?.subtitle && (
-              <p className="text-lg text-gray-600 mb-4">{currentSubmission.metadata.subtitle}</p>
-            )}
-
-            <div className="mb-4">
-              <h3 className="font-semibold text-gray-900 mb-2">Abstract</h3>
-              <p className="text-gray-700 leading-relaxed">{currentSubmission.metadata?.abstract}</p>
+                    {user.role === 'reviewer' && currentSubmission.status === 'with_reviewer' && (
+                      <>
+                        <button
+                          onClick={() => setShowActionModal('approve')}
+                          className="group flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                          <FaCheck className="group-hover:scale-125 transition-transform" />
+                          <span>Approve</span>
+                        </button>
+                        <button
+                          onClick={() => setShowActionModal('reject')}
+                          className="group flex items-center space-x-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                          <FaBan className="group-hover:rotate-180 transition-transform duration-500" />
+                          <span>Reject</span>
+                        </button>
+                        <button
+                          onClick={() => setShowActionModal('sendback')}
+                          className="group flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                          <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
+                          <span>Send Back</span>
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
+            {/* Edit hint for rejected submissions */}
+            {user.role === 'author' && canEdit && currentSubmission.status.includes('rejected') && (
+              <div className="mt-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-6 animate-scale-in">
+                <div className="flex items-start space-x-3">
+                  <FaBan className="w-5 h-5 text-amber-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <p className="font-bold text-amber-900 mb-1">Submission Rejected</p>
+                    <p className="text-sm text-amber-800">
+                      You can edit and resubmit your submission using the Edit button above.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Submission Info Grid */}
+            <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="group">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Journal</div>
+                <div className="font-bold text-gray-900 capitalize text-lg group-hover:text-teal-600 transition-colors">
+                  {currentSubmission.journal}
+                </div>
+              </div>
+              <div className="group">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Section</div>
+                <div className="font-bold text-gray-900 text-lg group-hover:text-teal-600 transition-colors">
+                  {currentSubmission.section}
+                </div>
+              </div>
+              <div className="group">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Author</div>
+                <div className="font-bold text-gray-900 text-lg group-hover:text-teal-600 transition-colors">
+                  {currentSubmission.author?.firstName} {currentSubmission.author?.lastName}
+                </div>
+              </div>
+              <div className="group">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Submitted</div>
+                <div className="font-bold text-gray-900 text-lg group-hover:text-teal-600 transition-colors">
+                  {currentSubmission.submittedAt
+                    ? format(new Date(currentSubmission.submittedAt), 'MMM dd, yyyy')
+                    : 'Not submitted'}
+                </div>
+              </div>
+              {currentSubmission.publicationDate && (
+                <div className="group">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Publication Date</div>
+                  <div className="font-bold text-gray-900 text-lg group-hover:text-teal-600 transition-colors">
+                    {format(new Date(currentSubmission.publicationDate), 'MMM dd, yyyy')}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Article Details Card */}
+          <div className="glass-morphism rounded-2xl shadow-xl p-8 animate-fade-in-up animate-delay-100 hover-lift">
+            <div className="mb-6 flex items-center space-x-3">
+              <div className="w-1 h-8 bg-gradient-to-b from-teal-600 to-amber-400 rounded-full"></div>
+              <h2 className="text-3xl font-bold text-gray-900 bg-gradient-to-r from-teal-700 to-amber-600 bg-clip-text text-transparent">
+                {currentSubmission.metadata?.title}
+              </h2>
+            </div>
+                 {/* {user.role === 'author' && currentSubmission.editorNotes && currentSubmission.status === 'pending' && (
+              <div className="mt-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-6 animate-scale-in">
+                <h3 className="font-bold text-amber-900 mb-3 text-lg flex items-center space-x-2">
+                  <FaUndo className="w-5 h-5" />
+                  <span>Editor's Feedback - Changes Required</span>
+                </h3>
+                <div 
+                  className="text-amber-900 prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: currentSubmission.editorNotes }}
+                />
+                <p className="text-sm text-amber-700 mt-4 italic bg-white/50 rounded-lg p-3 border border-amber-200">
+                  The editor has reviewed your submission and is requesting some changes. Please update your submission using the Edit button above.
+                </p>
+              </div>
+            )} */}
+            
+            {currentSubmission.metadata?.subtitle && (
+              <p className="text-xl text-gray-600 mb-6 font-medium italic">{currentSubmission.metadata.subtitle}</p>
+            )}
+
+           <div className="mb-6 bg-gradient-to-br from-teal-50 to-blue-50 rounded-xl p-6 border-l-4 border-teal-600">
+  <h3 className="font-bold text-teal-900 mb-3 text-lg flex items-center space-x-2">
+    <FaFileAlt className="w-5 h-5" />
+    <span>Abstract</span>
+  </h3>
+
+  <div
+    className="text-gray-800 leading-relaxed prose prose-teal max-w-none"
+    dangerouslySetInnerHTML={{
+      __html: currentSubmission.metadata?.abstract || "",
+    }}
+  />
+</div>
+
+
             {currentSubmission.metadata?.keywords && currentSubmission.metadata.keywords.length > 0 && (
-              <div className="mb-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Keywords</h3>
+              <div className="mb-6">
+                <h3 className="font-bold text-gray-900 mb-3 text-lg">Keywords</h3>
                 <div className="flex flex-wrap gap-2">
                   {currentSubmission.metadata.keywords.map((keyword, idx) => (
                     <span
                       key={idx}
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+                      className="bg-gradient-to-r from-teal-100 to-blue-100 text-teal-800 px-4 py-2 rounded-full text-sm font-semibold border-2 border-teal-200 hover:scale-110 hover:shadow-md transition-all duration-300 cursor-default"
                     >
                       {keyword}
                     </span>
@@ -415,96 +706,121 @@ const handleSendBack = async () => {
               </div>
             )}
 
-            {currentSubmission.documentFile && (
-              <div className="mt-6">
-                <h3 className="font-semibold text-gray-900 mb-2">Document</h3>
-                <a
-                  href={currentSubmission.documentFile.signedUrl || currentSubmission.documentFile.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-outlook-blue hover:text-outlook-darkBlue"
-                >
-                  <FaDownload />
-                  <span>{currentSubmission.documentFile.filename}</span>
-                </a>
-              </div>
-            )}
+       {currentSubmission.documentFile && (
+  <div className="mt-6 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-6 border-2 border-gray-200">
+    <h3 className="font-bold text-gray-900 mb-3 text-lg flex items-center space-x-2">
+      <FaFileAlt className="w-5 h-5 text-teal-600" />
+      <span>Document</span>
+    </h3>
+    <div className="flex items-center justify-between bg-white px-6 py-4 rounded-lg border-2 border-teal-600">
+      <div className="flex items-center space-x-3">
+        <FaFileAlt className="w-5 h-5 text-teal-600" />
+        <span className="font-medium text-teal-700">
+          {currentSubmission.documentFile.filename}
+        </span>
+      </div>
+      <button
+        onClick={handleOpenPdf}
+        className="flex items-center space-x-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+      >
+        <FaFileAlt className="w-4 h-4" />
+        <span>Open Document</span>
+      </button>
+    </div>
+  </div>
+)}
 
             {currentSubmission.rejectionReason && (
-              <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 className="font-semibold text-red-800 mb-2">Rejection Reason</h3>
-                <p className="text-red-700">{currentSubmission.rejectionReason}</p>
+              <div className="mt-6 bg-gradient-to-r from-rose-50 to-red-50 border-2 border-rose-300 rounded-xl p-6 animate-scale-in">
+                <h3 className="font-bold text-rose-900 mb-3 text-lg flex items-center space-x-2">
+                  <FaBan className="w-5 h-5" />
+                  <span>Rejection Reason</span>
+                </h3>
+                <p className="text-rose-800 leading-relaxed">{currentSubmission.rejectionReason}</p>
               </div>
             )}
-            {/* Show Reviewer Notes for Editor */}
-{user.role === 'editor' && currentSubmission.reviewerNotes && currentSubmission.status === 'approved_by_editor' && (
-  <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4">
-    <h3 className="font-semibold text-orange-800 mb-2 flex items-center">
-      <FaUndo className="mr-2" />
-      Reviewer's Notes - Changes Required
-    </h3>
-    <div 
-      className="text-orange-900 prose max-w-none"
-      dangerouslySetInnerHTML={{ __html: currentSubmission.reviewerNotes }}
-    />
-    <p className="text-sm text-orange-700 mt-3 italic">
-      The reviewer has sent this submission back for your review. Please check the notes above and take appropriate action.
-    </p>
-  </div>
-)}
 
-{/* Show Reviewer Notes in General (for all roles after review) */}
-{currentSubmission.reviewerNotes && currentSubmission.status !== 'approved_by_editor' && (
-  <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-    <h3 className="font-semibold text-blue-800 mb-2">Reviewer's Notes</h3>
-    <div 
-      className="text-blue-900 prose max-w-none"
-      dangerouslySetInnerHTML={{ __html: currentSubmission.reviewerNotes }}
-    />
-  </div>
-)}
+            {/* Reviewer Notes for Editor */}
+            {/* {user.role === 'editor' && currentSubmission.reviewerNotes && currentSubmission.status === 'approved_by_editor' && (
+              <div className="mt-6 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-xl p-6 animate-scale-in">
+                <h3 className="font-bold text-orange-900 mb-3 text-lg flex items-center space-x-2">
+                  <FaUndo className="w-5 h-5" />
+                  <span>Reviewer's Notes - Changes Required</span>
+                </h3>
+                <div 
+                  className="text-orange-900 prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: currentSubmission.reviewerNotes }}
+                />
+                <p className="text-sm text-orange-700 mt-4 italic bg-white/50 rounded-lg p-3 border border-orange-200">
+                  The reviewer has sent this submission back for your review. Please check the notes above and take appropriate action.
+                </p>
+              </div>
+            )} */}
+
+            {/* Reviewer Notes in General
+            {currentSubmission.reviewerNotes && currentSubmission.status !== 'approved_by_editor' && (
+              <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6">
+                <h3 className="font-bold text-blue-900 mb-3 text-lg flex items-center space-x-2">
+                  <FaFileAlt className="w-5 h-5" />
+                  <span>Reviewer's Notes</span>
+                </h3>
+                <div 
+                  className="text-blue-900 prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: currentSubmission.reviewerNotes }}
+                />
+              </div>
+            )} */}
           </div>
+
+          {/* Timeline */}
+          {currentSubmission.timeline && currentSubmission.timeline.length > 0 && (
+            <div className="animate-fade-in-up animate-delay-200">
+              <SubmissionTimeline timeline={currentSubmission.timeline} />
+            </div>
+          )}
         </div>
 
         {/* Right Panel - Email Communication */}
         {canSendEmail() && (
-          <div className="w-96 border-l border-outlook-border flex flex-col bg-outlook-gray">
-            <div className="p-4 border-b border-outlook-border bg-white">
+          <div className="w-[420px] border-l-2 border-teal-100 flex flex-col bg-gradient-to-b from-white to-teal-50/30">
+            <div className="p-6 border-b-2 border-teal-100 bg-gradient-to-r from-teal-600 to-teal-700 text-white">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold flex items-center space-x-2">
-                  <FaEnvelope />
+                <h3 className="font-bold text-lg flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center">
+                    <FaEnvelope className="w-5 h-5 text-teal-900" />
+                  </div>
                   <span>Communication</span>
                 </h3>
                 <button
                   onClick={() => setShowEmailComposer(!showEmailComposer)}
-                  className="bg-outlook-blue hover:bg-outlook-darkBlue text-white px-3 py-1 rounded text-sm transition-colors"
+                  className="bg-white text-teal-700 hover:bg-amber-400 hover:text-teal-900 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 hover:scale-105 shadow-lg"
                 >
-                  {showEmailComposer ? 'Cancel' : 'New Message'}
+                  {showEmailComposer ? 'Cancel' : '+ New Message'}
                 </button>
               </div>
             </div>
 
             {/* Email Composer */}
             {showEmailComposer && (
-              <div className="p-4 border-b border-outlook-border bg-white">
+              <div className="p-6 border-b-2 border-teal-100 bg-white animate-scale-in space-y-4">
                 <input
                   type="text"
                   placeholder="Subject"
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded mb-2 text-sm"
+                  className="w-full px-4 py-3 border-2 border-teal-200 rounded-xl text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-all"
                 />
                 <textarea
                   placeholder="Type your message..."
                   value={emailBody}
                   onChange={(e) => setEmailBody(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded mb-2 text-sm"
+                  rows={5}
+                  className="w-full px-4 py-3 border-2 border-teal-200 rounded-xl text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-all resize-none"
                 />
-                <div className="flex items-center space-x-2">
-                  <label className="cursor-pointer text-sm text-gray-600 hover:text-gray-900">
-                    <FaImage className="inline mr-1" />
-                    Attach Images
+                <div className="flex items-center justify-between">
+                  <label className="cursor-pointer text-sm text-teal-700 hover:text-teal-900 font-medium flex items-center space-x-2 hover:scale-105 transition-transform">
+                    <FaImage className="w-4 h-4" />
+                    <span>Attach Images</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -514,59 +830,75 @@ const handleSendBack = async () => {
                     />
                   </label>
                   {emailImages.length > 0 && (
-                    <span className="text-xs text-gray-500">({emailImages.length} image(s))</span>
+                    <span className="text-xs bg-teal-100 text-teal-700 px-3 py-1 rounded-full font-bold">
+                      {emailImages.length} image(s)
+                    </span>
                   )}
                 </div>
                 <button
                   onClick={handleSendEmail}
-                  className="w-full mt-3 flex items-center justify-center space-x-2 bg-outlook-blue hover:bg-outlook-darkBlue text-white px-4 py-2 rounded transition-colors"
+                  className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
                 >
                   <FaPaperPlane />
-                  <span>Send</span>
+                  <span>Send Message</span>
                 </button>
               </div>
             )}
 
             {/* Email Thread */}
-            <div className="flex-1 overflow-y-auto outlook-scrollbar p-4">
+            <div className="flex-1 overflow-y-auto p-6">
               {emails.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  <FaEnvelope className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm">No messages yet</p>
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-gradient-to-br from-teal-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <FaEnvelope className="w-10 h-10 text-teal-600" />
+                  </div>
+                  <p className="text-gray-500 font-medium">No messages yet</p>
+                  <p className="text-sm text-gray-400 mt-1">Start a conversation</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {emails.map((email) => {
+                  {emails.map((email, idx) => {
                     const isFromMe = email.sender._id === user.id;
                     return (
                       <div
                         key={email._id}
-                        className={`p-3 rounded-lg ${
-                          isFromMe ? 'bg-outlook-lightBlue ml-4' : 'bg-white mr-4 shadow'
-                        }`}
+                        className={`animate-fade-in-up ${isFromMe ? 'ml-6' : 'mr-6'}`}
+                        style={{ animationDelay: `${idx * 0.1}s` }}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="font-medium text-sm">
-                            {isFromMe ? 'You' : `${email.sender.firstName} ${email.sender.lastName}`}
+                        <div
+                          className={`p-4 rounded-2xl ${
+                            isFromMe 
+                              ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg' 
+                              : 'bg-white border-2 border-gray-200 shadow-md hover-lift'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className={`font-bold text-sm ${isFromMe ? 'text-white' : 'text-gray-900'}`}>
+                              {isFromMe ? 'You' : `${email.sender.firstName} ${email.sender.lastName}`}
+                            </div>
+                            <div className={`text-xs ${isFromMe ? 'text-teal-100' : 'text-gray-500'}`}>
+                              {format(new Date(email.sentAt), 'MMM dd, HH:mm')}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {format(new Date(email.sentAt), 'MMM dd, HH:mm')}
+                          <div className={`text-sm font-bold mb-2 ${isFromMe ? 'text-white' : 'text-gray-900'}`}>
+                            {email.subject}
                           </div>
+                          <div className={`text-sm whitespace-pre-wrap ${isFromMe ? 'text-white' : 'text-gray-700'}`}>
+                            {email.body}
+                          </div>
+                          {email.attachments && email.attachments.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {email.attachments.map((att, idx) => (
+                                <img
+                                  key={idx}
+                                  src={att.url}
+                                  alt={att.filename}
+                                  className="max-w-full rounded-xl shadow-md hover:scale-105 transition-transform duration-300"
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-sm font-medium mb-1">{email.subject}</div>
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap">{email.body}</div>
-                        {email.attachments && email.attachments.length > 0 && (
-                          <div className="mt-2 space-y-2">
-                            {email.attachments.map((att, idx) => (
-                              <img
-                                key={idx}
-                                src={att.url}
-                                alt={att.filename}
-                                className="max-w-full rounded"
-                              />
-                            ))}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -577,96 +909,242 @@ const handleSendBack = async () => {
         )}
       </div>
 
-  {showActionModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-      <h3 className="text-xl font-semibold mb-4 capitalize">
-        {showActionModal === 'sendback' ? 'Send Back to Editor' : 
-         showActionModal === 'schedule' ? 'Schedule Publication' : 
-         `${showActionModal} Submission`}
-      </h3>
-      
-      {showActionModal === 'schedule' ? (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Publication Date
-          </label>
-          <input
-            type="date"
-            value={publicationDate}
-            onChange={(e) => setPublicationDate(e.target.value)}
-            min={new Date().toISOString().split('T')[0]}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          />
-        </div>
-      ) : showActionModal === 'sendback' ? (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notes for Editor *
-          </label>
-          <p className="text-sm text-gray-500 mb-3">
-            Please explain what changes or corrections are needed in the submission.
-          </p>
-          <ReactQuill
-            theme="snow"
-            value={actionNotes}
-            onChange={setActionNotes}
-            modules={{
-              toolbar: [
-                [{ 'header': [1, 2, 3, false] }],
-                ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                ['clean']
-              ]
-            }}
-            placeholder="Enter detailed notes about required changes..."
-            style={{ height: '200px', marginBottom: '50px' }}
-          />
-        </div>
-      ) : (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            {showActionModal === 'reject' ? 'Rejection Reason *' : 'Notes (Optional)'}
-          </label>
-          <textarea
-            value={actionNotes}
-            onChange={(e) => setActionNotes(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            placeholder={showActionModal === 'reject' ? 'Please provide detailed feedback...' : 'Add any notes...'}
-          />
+      {/* Action Modal */}
+    {showActionModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-scale-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className={`p-6 bg-gradient-to-r ${
+              showActionModal === 'approve' ? 'from-emerald-500 to-teal-600' :
+              showActionModal === 'reject' ? 'from-rose-500 to-red-600' :
+              showActionModal === 'editor_sendback' ? 'from-amber-500 to-orange-600' :
+              showActionModal === 'sendback' ? 'from-orange-500 to-amber-600' :
+              'from-indigo-500 to-blue-600'
+            } text-white rounded-t-2xl`}>
+              <h3 className="text-2xl font-bold capitalize flex items-center space-x-3">
+                {showActionModal === 'editor_sendback' && <FaUndo className="w-6 h-6" />}
+                <span>
+                  {showActionModal === 'editor_sendback' ? 'Send Back to Author' :
+                   showActionModal === 'sendback' ? 'Send Back to Editor' : 
+                   showActionModal === 'schedule' ? 'Schedule Publication' : 
+                   `${showActionModal} Submission`}
+                </span>
+              </h3>
+            </div>
+            
+            <div className="p-6">
+              {showActionModal === 'schedule' ? (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    Publication Date
+                  </label>
+                  <input
+                    type="date"
+                    value={publicationDate}
+                    onChange={(e) => setPublicationDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-all"
+                  />
+                </div>
+              ) : (showActionModal === 'sendback' || showActionModal === 'editor_sendback') ? (
+  <div>
+    <label className="block text-sm font-bold text-gray-700 mb-2">
+      {showActionModal === 'editor_sendback' ? 'Notes for Author *' : 'Notes for Editor *'}
+    </label>
+    <p className="text-sm text-gray-600 mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+      Please explain what changes or corrections are needed in the submission.
+    </p>
+    <ReactQuill
+      theme="snow"
+      value={actionNotes}
+      onChange={setActionNotes}
+      modules={{
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['clean']
+        ]
+      }}
+      placeholder="Enter detailed notes about required changes..."
+      style={{ height: '200px', marginBottom: '50px' }}
+    />
+  </div>
+) : (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    {showActionModal === 'reject' ? 'Rejection Reason *' : 'Notes (Optional)'}
+                  </label>
+                  <textarea
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    rows={8}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 transition-all resize-none"
+                    placeholder={showActionModal === 'reject' ? 'Please provide detailed feedback...' : 'Add any notes...'}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-4 p-6 bg-gray-50 rounded-b-2xl">
+              <button
+                onClick={() => {
+                  setShowActionModal(null);
+                  setActionNotes('');
+                  setPublicationDate('');
+                }}
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-100 font-medium transition-all duration-300 hover:scale-105"
+              >
+                Cancel
+              </button>
+         <button
+  onClick={
+    showActionModal === 'approve' ? handleApprove :
+    showActionModal === 'reject' ? handleReject :
+    showActionModal === 'editor_sendback' ? handleEditorSendBack :
+    showActionModal === 'sendback' ? handleSendBack :
+    handleSchedule
+  }
+  className={`px-6 py-3 rounded-xl text-white font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl ${
+    showActionModal === 'approve' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700' :
+    showActionModal === 'reject' ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700' :
+    (showActionModal === 'sendback' || showActionModal === 'editor_sendback') ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' :
+    'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700'
+  }`}
+>
+  Confirm
+</button>
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="flex justify-end space-x-3 mt-6">
-        <button
-          onClick={() => {
-            setShowActionModal(null);
-            setActionNotes('');
-            setPublicationDate('');
-          }}
-          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={
-            showActionModal === 'approve' ? handleApprove :
-            showActionModal === 'reject' ? handleReject :
-            showActionModal === 'sendback' ? handleSendBack :
-            handleSchedule
-          }
-          className={`px-4 py-2 rounded-lg text-white ${
-            showActionModal === 'approve' ? 'bg-green-600 hover:bg-green-700' :
-            showActionModal === 'reject' ? 'bg-red-600 hover:bg-red-700' :
-            showActionModal === 'sendback' ? 'bg-orange-600 hover:bg-orange-700' :
-            'bg-indigo-600 hover:bg-indigo-700'
-          }`}
-        >
-          Confirm
-        </button>
+      {/* PDF Viewer Modal */}
+{/* Enhanced PDF Viewer Modal */}
+{showPdfViewer && (
+  <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
+    {/* Header */}
+    <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center space-x-3">
+        <FaFileAlt className="w-5 h-5" />
+        <span className="font-bold text-lg">{currentSubmission.documentFile.filename}</span>
+       
       </div>
+      <button
+        onClick={handleClosePdf}
+        className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-all duration-300"
+      >
+        <FaTimes className="w-4 h-4" />
+        <span className="font-medium">Close</span>
+      </button>
     </div>
+
+    {/* Screenshot Warning Banner */}
+    {showScreenshotWarning && (
+      <div className="bg-red-600 text-white px-6 py-3 flex items-center justify-center space-x-3 animate-pulse">
+        <FaBan className="w-5 h-5" />
+        <span className="font-bold">
+          Screenshot attempt detected and logged! This action may result in access revocation.
+        </span>
+      </div>
+    )}
+
+    {/* PDF Viewer */}
+    <div 
+      className="flex-1 overflow-auto bg-gray-800 relative"
+      style={{
+        userSelect: user.role === 'reviewer' ? 'none' : 'auto',
+        WebkitUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
+        MozUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
+        msUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
+        WebkitTouchCallout: user.role === 'reviewer' ? 'none' : 'auto'
+      }}
+      onContextMenu={(e) => {
+        if (user.role === 'reviewer') {
+          e.preventDefault();
+          setShowScreenshotWarning(true);
+          setTimeout(() => setShowScreenshotWarning(false), 2000);
+        }
+      }}
+      onCopy={(e) => user.role === 'reviewer' && e.preventDefault()}
+      onCut={(e) => user.role === 'reviewer' && e.preventDefault()}
+      onPaste={(e) => user.role === 'reviewer' && e.preventDefault()}
+      onDragStart={(e) => user.role === 'reviewer' && e.preventDefault()}
+    >
+      {pdfUrl && (
+        <iframe
+          src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+          className="w-full h-full"
+          title="PDF Viewer"
+          style={{
+            border: 'none',
+            pointerEvents: 'auto'
+          }}
+        />
+      )}
+
+      {/* Multiple Moving Watermarks for Reviewers */}
+      {user.role === 'reviewer' && (
+        <>
+          {/* Main moving watermark */}
+          <div 
+            className="absolute pointer-events-none transition-all duration-2000 ease-linear"
+            style={{
+              left: `${watermarkPosition.x}%`,
+              top: `${watermarkPosition.y}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10
+            }}
+          >
+            <div className="text-red-500/30 text-4xl font-bold transform -rotate-45 select-none whitespace-nowrap">
+              {user.firstName} {user.lastName} - {user.email}
+            </div>
+            <div className="text-red-500/20 text-sm text-center mt-2">
+              {new Date().toLocaleString()}
+            </div>
+          </div>
+
+          {/* Static corner watermarks */}
+          <div className="absolute top-4 left-4 text-white/20 text-xs font-mono pointer-events-none">
+            Reviewer: {user.firstName} {user.lastName}<br/>
+            {new Date().toLocaleString()}<br/>
+            ID: {id}
+          </div>
+          <div className="absolute top-4 right-4 text-white/20 text-xs font-mono pointer-events-none text-right">
+            CONFIDENTIAL<br/>
+            DO NOT COPY<br/>
+            DO NOT SHARE
+          </div>
+          <div className="absolute bottom-4 left-4 text-white/20 text-xs font-mono pointer-events-none">
+            All access logged
+          </div>
+          <div className="absolute bottom-4 right-4 text-white/20 text-xs font-mono pointer-events-none text-right">
+            {user.email}
+          </div>
+
+          {/* Diagonal repeating watermark pattern */}
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-10"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 100px,
+                rgba(255, 0, 0, 0.1) 100px,
+                rgba(255, 0, 0, 0.1) 101px
+              )`,
+              zIndex: 5
+            }}
+          />
+        </>
+      )}
+    </div>
+
+    {/* Bottom warning bar for reviewers */}
+    {user.role === 'reviewer' && (
+      <div className="bg-red-900 text-white px-6 py-3 text-center text-sm">
+        <strong>⚠️ CONFIDENTIAL DOCUMENT</strong> - Screenshots, screen recordings, and unauthorized sharing are strictly prohibited and logged. 
+        Violations may result in immediate access revocation and legal action.
+      </div>
+    )}
   </div>
 )}
     </div>

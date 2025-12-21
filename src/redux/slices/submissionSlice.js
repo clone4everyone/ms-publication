@@ -290,6 +290,22 @@ export const reviewerSendBack = createAsyncThunk(
     }
   }
 );
+export const editorSendBack = createAsyncThunk(
+  'submissions/editorSendBack',
+  async ({ id, editorNotes }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.token;
+      const response = await axios.put(
+        `${EDITOR_URL}/submissions/${id}/send-back`, 
+        { editorNotes }, 
+        getConfig(token)
+      );
+      return response.data.data.submission;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 const submissionSlice = createSlice({
   name: 'submissions',
   initialState,
@@ -396,6 +412,19 @@ const submissionSlice = createSlice({
   state.currentSubmission = action.payload;
 })
 .addCase(reviewerSendBack.rejected, (state, action) => {
+  state.isLoading = false;
+  state.isError = true;
+  state.message = action.payload;
+})
+.addCase(editorSendBack.pending, (state) => {
+  state.isLoading = true;
+})
+.addCase(editorSendBack.fulfilled, (state, action) => {
+  state.isLoading = false;
+  state.isSuccess = true;
+  state.currentSubmission = action.payload;
+})
+.addCase(editorSendBack.rejected, (state, action) => {
   state.isLoading = false;
   state.isError = true;
   state.message = action.payload;

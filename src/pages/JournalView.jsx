@@ -262,9 +262,10 @@ function JournalView() {
                         </span>
                       </div>
 
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {submission.metadata?.abstract || 'No abstract available'}
-                      </p>
+                       <div className="text-gray-600 text-sm line-clamp-2 mb-4"  
+                          dangerouslySetInnerHTML={{
+      __html: submission.metadata?.abstract || "",
+    }}/>
 
                       {submission.metadata?.keywords && submission.metadata.keywords.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
