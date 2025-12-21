@@ -209,7 +209,7 @@ function AuthorDashboard() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button 
-                onClick={() => navigate('/journals')}
+                onClick={() => navigate('/J-PHARMA-001')}
                 className="flex items-center space-x-3 group"
               >
                 <div className="w-10 h-10 bg-gradient-to-br  rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all group-hover:scale-110">

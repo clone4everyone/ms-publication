@@ -6,10 +6,15 @@ import {
   Archive, FileText, Send, Award, TrendingUp, Eye,
   Download, Share2, Star, Sparkles, Zap, Globe
 } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+
+import { logout } from '../../redux/slices/authSlice';
 import api from "../../utils/api"
 import logo from "../../../public/ms-logo.png"
 function JournalDetail() {
-  const { journalId } = useParams();
+  // const { journalId } = useParams();
+   const dispatch = useDispatch();
+  const journalId='J-PHARMA-001'
   const navigate = useNavigate();
   const [journal, setJournal] = useState(null);
   const [currentPage, setCurrentPage] = useState('home');
@@ -107,11 +112,10 @@ function JournalDetail() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    dispatch(logout());
     setIsAuthenticated(false);
     setUser(null);
-    navigate('/journals');
+    navigate('/login');
   };
 
   if (!journal) {
@@ -142,7 +146,7 @@ function JournalDetail() {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-4">
               <button 
-                onClick={() => navigate('/journals')}
+                onClick={() => navigate('/J-PHARMA-001')}
                 className="group flex items-center space-x-3 hover:scale-105 transition-transform duration-300"
               >
                 <div className={`w-12 h-12 bg-gradient-to-br  rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300`}>

@@ -34,7 +34,7 @@ const SECTIONS = [
   'Conference Proceedings'
 ];
 
-const JOURNALS = ['pharma', 'history', 'chemistry', 'science', 'ayurvedic', 'technology'];
+const JOURNALS = ['pharma'];
 
 function NewSubmission() {
   const navigate = useNavigate();

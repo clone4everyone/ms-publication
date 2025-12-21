@@ -117,6 +117,9 @@ const SubmissionTimeline = ({ timeline }) => {
                   {event.description && (
                     <p className="text-sm text-gray-700 mb-2">{event.description}</p>
                   )}
+                   {event.notes && (
+                    <p className="text-sm text-gray-700 mb-2">{event.notes}</p>
+                  )}
 
                   {/* Metadata (if exists) */}
                   {event.metadata && (

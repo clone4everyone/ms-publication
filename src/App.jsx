@@ -60,8 +60,8 @@ function App() {
           <Route path="/" element={<JournalHomepage />} /> 
           {/* Dashboard Redirect */}
           {/* <Route path="/" element={<DashboardRedirect />} /> */}
-          <Route path="/journals" element={<JournalHomepage />} />
-<Route path="/journals/:journalId" element={<JournalDetail />} />
+          {/* <Route path="/journals" element={<JournalHomepage />} /> */}
+<Route path="/J-PHARMA-001" element={<JournalDetail />} />
 
           {/* Author Routes */}
           <Route
