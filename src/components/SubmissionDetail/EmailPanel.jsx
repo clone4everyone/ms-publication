@@ -1,29 +1,49 @@
-// src/components/submission/EmailCommunicationPanel.jsx
-import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { FaEnvelope, FaPaperPlane, FaImage } from 'react-icons/fa';
 import { format } from 'date-fns';
+import { sendEmail, getSubmissionEmails } from '../../redux/slices/emailSlice';
+import { toast } from 'react-toastify';
 
-const EmailCommunicationPanel = ({ 
-  emails, 
-  user, 
-  onSendEmail 
-}) => {
-  const [showComposer, setShowComposer] = useState(false);
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailBody, setEmailBody] = useState('');
-  const [emailImages, setEmailImages] = useState([]);
+function EmailPanel({
+  submissionId,
+  emails,
+  user,
+  showComposer,
+  onToggleComposer,
+  emailSubject,
+  setEmailSubject,
+  emailBody,
+  setEmailBody,
+  emailImages,
+  setEmailImages
+}) {
+  const dispatch = useDispatch();
 
-  const handleSend = () => {
-    onSendEmail({ subject: emailSubject, body: emailBody, images: emailImages });
-    setShowComposer(false);
-    setEmailSubject('');
-    setEmailBody('');
-    setEmailImages([]);
+  const handleSendEmail = async () => {
+    if (!emailSubject || !emailBody) {
+      toast.error('Please fill in subject and body');
+      return;
+    }
+
+    const result = await dispatch(sendEmail({
+      submissionId,
+      subject: emailSubject,
+      body: emailBody,
+      images: emailImages
+    }));
+
+    if (result.type === 'emails/send/fulfilled') {
+      toast.success('Email sent successfully');
+      onToggleComposer();
+      setEmailSubject('');
+      setEmailBody('');
+      setEmailImages([]);
+      dispatch(getSubmissionEmails(submissionId));
+    }
   };
 
   return (
     <div className="w-[420px] border-l-2 border-teal-100 flex flex-col bg-gradient-to-b from-white to-teal-50/30">
-      {/* Header */}
       <div className="p-6 border-b-2 border-teal-100 bg-gradient-to-r from-teal-600 to-teal-700 text-white">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-lg flex items-center space-x-3">
@@ -33,7 +53,7 @@ const EmailCommunicationPanel = ({
             <span>Communication</span>
           </h3>
           <button
-            onClick={() => setShowComposer(!showComposer)}
+            onClick={onToggleComposer}
             className="bg-white text-teal-700 hover:bg-amber-400 hover:text-teal-900 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 hover:scale-105 shadow-lg"
           >
             {showComposer ? 'Cancel' : '+ New Message'}
@@ -77,7 +97,7 @@ const EmailCommunicationPanel = ({
             )}
           </div>
           <button
-            onClick={handleSend}
+            onClick={handleSendEmail}
             className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
           >
             <FaPaperPlane />
@@ -148,6 +168,6 @@ const EmailCommunicationPanel = ({
       </div>
     </div>
   );
-};
+}
 
-export default EmailCommunicationPanel;
+export default EmailPanel;

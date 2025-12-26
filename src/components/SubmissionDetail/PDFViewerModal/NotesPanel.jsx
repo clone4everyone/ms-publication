@@ -1,23 +1,15 @@
 import { FaFileAlt, FaCheck, FaTimes } from 'react-icons/fa';
-import { toast } from 'react-toastify';
 
 function NotesPanel({
   currentPage,
   setCurrentPage,
-  pageNotes,
   currentPageNote,
   setCurrentPageNote,
-  onSaveNote,
-  onDeleteNote,
-  submissionId
+  pageNotes,
+  onSave,
+  onDelete,
+  onClearAll
 }) {
-  const handleClearAll = () => {
-    if (window.confirm('Clear all notes?')) {
-      localStorage.removeItem(`submission_notes_${submissionId}`);
-      toast.success('All notes cleared');
-    }
-  };
-
   return (
     <div className="w-96 bg-white shadow-2xl flex flex-col overflow-hidden">
       {/* Notes Header */}
@@ -49,7 +41,7 @@ function NotesPanel({
         {/* Save/Delete Buttons */}
         <div className="flex space-x-2">
           <button
-            onClick={onSaveNote}
+            onClick={onSave}
             disabled={!currentPageNote.trim()}
             className="flex-1 flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-300 disabled:to-gray-400 text-white px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
           >
@@ -58,7 +50,7 @@ function NotesPanel({
           </button>
           {pageNotes[currentPage] && (
             <button
-              onClick={onDeleteNote}
+              onClick={onDelete}
               className="flex items-center justify-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105"
             >
               <FaTimes className="w-4 h-4" />
@@ -72,7 +64,7 @@ function NotesPanel({
             <h4 className="font-bold text-gray-900 mb-3 flex items-center justify-between">
               <span>All Notes ({Object.keys(pageNotes).length} pages)</span>
               <button
-                onClick={handleClearAll}
+                onClick={onClearAll}
                 className="text-xs text-red-600 hover:text-red-700 font-normal"
               >
                 Clear All
@@ -102,6 +94,7 @@ function NotesPanel({
                     <p className="text-xs text-gray-600 line-clamp-2">
                       {pageNotes[page]}
                     </p>
+                    
                   </div>
                 ))}
             </div>

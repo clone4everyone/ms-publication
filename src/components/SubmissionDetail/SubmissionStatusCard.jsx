@@ -1,12 +1,10 @@
-// src/components/submission/SubmissionStatusCard.jsx
-import React from 'react';
-import { FaEdit, FaCheck, FaBan, FaUndo, FaForward, FaCalendar } from 'react-icons/fa';
+import { FaEdit, FaUndo, FaCheck, FaBan, FaForward, FaCalendar } from 'react-icons/fa';
 import { format } from 'date-fns';
+import { getStatusBadge } from './utils';
 
-const SubmissionStatusCard = ({ 
-  submission, 
-  user, 
-  badge, 
+function SubmissionStatusCard({
+  submission,
+  user,
   canEdit,
   canShowActions,
   onEdit,
@@ -14,9 +12,9 @@ const SubmissionStatusCard = ({
   onReject,
   onSendBack,
   onMoveToReviewer,
-  onSchedule,
-  onEditorSendBack
-}) => {
+  onSchedule
+}) {
+  const badge = getStatusBadge(submission.status);
   const StatusIcon = badge.icon;
 
   return (
@@ -47,10 +45,10 @@ const SubmissionStatusCard = ({
             </button>
           )}
 
-          {/* Editor Actions */}
-          {canShowActions() && user.role === 'editor' && (
+          {/* Editor/Reviewer Actions */}
+          {canShowActions && (
             <>
-              {submission.status !== 'approved_by_editor' && (
+              {user.role === 'editor' && submission.status !== 'approved_by_editor' && (
                 <>
                   <button
                     onClick={onApprove}
@@ -67,7 +65,7 @@ const SubmissionStatusCard = ({
                     <span>Reject</span>
                   </button>
                   <button
-                    onClick={onEditorSendBack}
+                    onClick={onSendBack}
                     className="group flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                   >
                     <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
@@ -76,7 +74,7 @@ const SubmissionStatusCard = ({
                 </>
               )}
 
-              {submission.status !== 'with_reviewer' && submission.status !== 'approved_by_editor' && (
+              {user.role === 'editor' && submission.status !== 'with_reviewer' && submission.status !== 'approved_by_editor' && (
                 <button
                   onClick={onMoveToReviewer}
                   className="group flex items-center space-x-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
@@ -86,7 +84,7 @@ const SubmissionStatusCard = ({
                 </button>
               )}
 
-              {submission.status === 'approved_by_editor' && (
+              {user.role === 'editor' && submission.status === 'approved_by_editor' && (
                 <>
                   <button
                     onClick={onSchedule}
@@ -96,7 +94,7 @@ const SubmissionStatusCard = ({
                     <span>Schedule Publication</span>
                   </button>
                   <button
-                    onClick={onEditorSendBack}
+                    onClick={onSendBack}
                     className="group flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                   >
                     <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
@@ -104,33 +102,32 @@ const SubmissionStatusCard = ({
                   </button>
                 </>
               )}
-            </>
-          )}
 
-          {/* Reviewer Actions */}
-          {canShowActions() && user.role === 'reviewer' && submission.status === 'with_reviewer' && (
-            <>
-              <button
-                onClick={onApprove}
-                className="group flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              >
-                <FaCheck className="group-hover:scale-125 transition-transform" />
-                <span>Approve</span>
-              </button>
-              <button
-                onClick={onReject}
-                className="group flex items-center space-x-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              >
-                <FaBan className="group-hover:rotate-180 transition-transform duration-500" />
-                <span>Reject</span>
-              </button>
-              <button
-                onClick={onSendBack}
-                className="group flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              >
-                <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
-                <span>Send Back</span>
-              </button>
+              {user.role === 'reviewer' && submission.status === 'with_reviewer' && (
+                <>
+                  <button
+                    onClick={onApprove}
+                    className="group flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    <FaCheck className="group-hover:scale-125 transition-transform" />
+                    <span>Approve</span>
+                  </button>
+                  <button
+                    onClick={onReject}
+                    className="group flex items-center space-x-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    <FaBan className="group-hover:rotate-180 transition-transform duration-500" />
+                    <span>Reject</span>
+                  </button>
+                  <button
+                    onClick={onSendBack}
+                    className="group flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
+                    <span>Send Back</span>
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -190,6 +187,6 @@ const SubmissionStatusCard = ({
       </div>
     </div>
   );
-};
+}
 
 export default SubmissionStatusCard;

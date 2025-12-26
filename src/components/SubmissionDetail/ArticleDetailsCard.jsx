@@ -1,8 +1,6 @@
-// src/components/submission/SubmissionArticleDetails.jsx
-import React from 'react';
-import { FaFileAlt, FaBan } from 'react-icons/fa';
+import { FaBan, FaFileAlt } from 'react-icons/fa';
 
-const SubmissionArticleDetails = ({ submission, onOpenPdf }) => {
+function ArticleDetailsCard({ submission, user, onOpenPdf }) {
   return (
     <div className="glass-morphism rounded-2xl shadow-xl p-8 animate-fade-in-up animate-delay-100 hover-lift">
       <div className="mb-6 flex items-center space-x-3">
@@ -13,12 +11,9 @@ const SubmissionArticleDetails = ({ submission, onOpenPdf }) => {
       </div>
 
       {submission.metadata?.subtitle && (
-        <p className="text-xl text-gray-600 mb-6 font-medium italic">
-          {submission.metadata.subtitle}
-        </p>
+        <p className="text-xl text-gray-600 mb-6 font-medium italic">{submission.metadata.subtitle}</p>
       )}
 
-      {/* Abstract */}
       <div className="mb-6 bg-gradient-to-br from-teal-50 to-blue-50 rounded-xl p-6 border-l-4 border-teal-600">
         <h3 className="font-bold text-teal-900 mb-3 text-lg flex items-center space-x-2">
           <FaFileAlt className="w-5 h-5" />
@@ -32,7 +27,6 @@ const SubmissionArticleDetails = ({ submission, onOpenPdf }) => {
         />
       </div>
 
-      {/* Keywords */}
       {submission.metadata?.keywords && submission.metadata.keywords.length > 0 && (
         <div className="mb-6">
           <h3 className="font-bold text-gray-900 mb-3 text-lg">Keywords</h3>
@@ -49,7 +43,6 @@ const SubmissionArticleDetails = ({ submission, onOpenPdf }) => {
         </div>
       )}
 
-      {/* Document */}
       {submission.documentFile && (
         <div className="mt-6 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-6 border-2 border-gray-200">
           <h3 className="font-bold text-gray-900 mb-3 text-lg flex items-center space-x-2">
@@ -74,7 +67,6 @@ const SubmissionArticleDetails = ({ submission, onOpenPdf }) => {
         </div>
       )}
 
-      {/* Rejection Reason */}
       {submission.rejectionReason && (
         <div className="mt-6 bg-gradient-to-r from-rose-50 to-red-50 border-2 border-rose-300 rounded-xl p-6 animate-scale-in">
           <h3 className="font-bold text-rose-900 mb-3 text-lg flex items-center space-x-2">
@@ -86,6 +78,6 @@ const SubmissionArticleDetails = ({ submission, onOpenPdf }) => {
       )}
     </div>
   );
-};
+}
 
-export default SubmissionArticleDetails;
+export default ArticleDetailsCard;

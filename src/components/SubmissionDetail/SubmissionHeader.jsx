@@ -1,16 +1,12 @@
-// src/components/submission/SubmissionHeader.jsx
-import React from 'react';
 import { FaArrowLeft, FaSignOutAlt, FaUser, FaBook } from 'react-icons/fa';
 
-const SubmissionHeader = ({ user, onBack, onLogout }) => {
-  const getHeaderGradient = () => {
-    if (user.role === 'editor') return 'from-teal-600 via-teal-700 to-teal-800';
-    if (user.role === 'reviewer') return 'from-violet-600 via-purple-700 to-violet-800';
-    return 'from-emerald-600 via-teal-700 to-emerald-800';
-  };
-
+function SubmissionHeader({ user, onBack, onLogout }) {
   return (
-    <div className={`h-16 bg-gradient-to-r ${getHeaderGradient()} flex items-center justify-between px-8 text-white shadow-xl animate-slide-down`}>
+    <div className={`h-16 bg-gradient-to-r ${
+      user.role === 'editor' ? 'from-teal-600 via-teal-700 to-teal-800' :
+      user.role === 'reviewer' ? 'from-violet-600 via-purple-700 to-violet-800' :
+      'from-emerald-600 via-teal-700 to-emerald-800'
+    } flex items-center justify-between px-8 text-white shadow-xl animate-slide-down`}>
       <div className="flex items-center space-x-6">
         <button
           onClick={onBack}
@@ -25,7 +21,6 @@ const SubmissionHeader = ({ user, onBack, onLogout }) => {
           <h1 className="text-xl font-bold tracking-wide">Submission Details</h1>
         </div>
       </div>
-      
       <div className="flex items-center space-x-6">
         <div className="flex items-center space-x-3 px-4 py-2 bg-white/10 rounded-lg">
           <div className="w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center">
@@ -46,6 +41,6 @@ const SubmissionHeader = ({ user, onBack, onLogout }) => {
       </div>
     </div>
   );
-};
+}
 
 export default SubmissionHeader;
