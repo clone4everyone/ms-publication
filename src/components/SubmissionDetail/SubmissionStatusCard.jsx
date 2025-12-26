@@ -1,7 +1,7 @@
 import { FaEdit, FaUndo, FaCheck, FaBan, FaForward, FaCalendar } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { getStatusBadge } from './utils';
-
+import { useState, useEffect } from 'react';
 function SubmissionStatusCard({
   submission,
   user,
@@ -14,6 +14,32 @@ function SubmissionStatusCard({
   onMoveToReviewer,
   onSchedule
 }) {
+  const [showReviewerModal, setShowReviewerModal] = useState(false);
+const [availableReviewers, setAvailableReviewers] = useState([]);
+const [selectedReviewer, setSelectedReviewer] = useState(null);
+const [reviewerNotes, setReviewerNotes] = useState('');
+const [loadingReviewers, setLoadingReviewers] = useState(false);
+
+const fetchAvailableReviewers = async () => {
+  setLoadingReviewers(true);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/api/editor/reviewers/available/${submission.journal}`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+    const data = await response.json();
+    if (data.success) {
+      setAvailableReviewers(data.data.reviewers);
+    }
+  } catch (error) {
+    console.error('Error fetching reviewers:', error);
+  } finally {
+    setLoadingReviewers(false);
+  }
+};
   const badge = getStatusBadge(submission.status);
   const StatusIcon = badge.icon;
 
@@ -76,7 +102,10 @@ function SubmissionStatusCard({
 
               {user.role === 'editor' && submission.status !== 'with_reviewer' && submission.status !== 'approved_by_editor' && (
                 <button
-                  onClick={onMoveToReviewer}
+                  onClick={() => {
+  setShowReviewerModal(true);
+  fetchAvailableReviewers();
+}}
                   className="group flex items-center space-x-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                 >
                   <FaForward className="group-hover:translate-x-1 transition-transform" />
@@ -185,6 +214,108 @@ function SubmissionStatusCard({
           </div>
         )}
       </div>
+      {showReviewerModal && (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="p-6 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-t-2xl">
+        <h3 className="text-2xl font-bold">Assign Reviewer</h3>
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-2">
+            Select Reviewer *
+          </label>
+          {loadingReviewers ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
+            </div>
+          ) : availableReviewers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No reviewers available for this journal
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {availableReviewers.map((reviewer) => (
+                <div
+                  key={reviewer._id}
+                  onClick={() => setSelectedReviewer(reviewer)}
+                  className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                    selectedReviewer?._id === reviewer._id
+                      ? 'border-violet-500 bg-violet-50'
+                      : 'border-gray-200 hover:border-violet-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-gray-900">
+                        {reviewer.firstName} {reviewer.lastName}
+                      </div>
+                      <div className="text-sm text-gray-600">{reviewer.email}</div>
+                      {reviewer.specialization && reviewer.specialization.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {reviewer.specialization.map((spec, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-teal-100 text-teal-700 rounded text-xs capitalize">
+                              {spec}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500">Active Reviews</div>
+                      <div className="text-lg font-bold text-gray-900">{reviewer.activeReviews || 0}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-2">
+            Notes for Reviewer (Optional)
+          </label>
+          <textarea
+            value={reviewerNotes}
+            onChange={(e) => setReviewerNotes(e.target.value)}
+            rows={4}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-violet-500 focus:outline-none resize-none"
+            placeholder="Any specific instructions for the reviewer..."
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-4 p-6 bg-gray-50 rounded-b-2xl">
+        <button
+          onClick={() => {
+            setShowReviewerModal(false);
+            setSelectedReviewer(null);
+            setReviewerNotes('');
+          }}
+          className="px-6 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-100 font-medium transition-all"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => {
+            if (selectedReviewer) {
+              onMoveToReviewer(selectedReviewer._id, reviewerNotes);
+              setShowReviewerModal(false);
+              setSelectedReviewer(null);
+              setReviewerNotes('');
+            }
+          }}
+          disabled={!selectedReviewer}
+          className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold hover:scale-105 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Assign Reviewer
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

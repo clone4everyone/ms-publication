@@ -176,10 +176,14 @@ export const rejectSubmission = createAsyncThunk(
 
 export const moveToReviewer = createAsyncThunk(
   'submissions/moveToReviewer',
-  async ({id,editorNotes}, thunkAPI) => {
+  async ({ id, reviewerId, editorNotes }, thunkAPI) => {
     try {
       const token = thunkAPI.getState().auth.token;
-      const response = await api.put(`${EDITOR_URL}/submissions/${id}/move-to-reviewer`, {editorNotes}, getConfig(token));
+      const response = await api.put(
+        `${EDITOR_URL}/submissions/${id}/move-to-reviewer`, 
+        { reviewerId, editorNotes }, 
+        getConfig(token)
+      );
       return response.data.data.submission;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);

@@ -204,9 +204,21 @@ function SubmissionDetail() {
     }
   };
 
-  const handleMoveToReviewer = () => {
-    setShowActionModal('send_to_reviewer');
-  };
+  // const handleMoveToReviewer = () => {
+  //   setShowActionModal('send_to_reviewer');
+  // };
+  const handleMoveToReviewer = async (reviewerId, editorNotes) => {
+  const result = await dispatch(moveToReviewer({ 
+    id, 
+    reviewerId, 
+    editorNotes 
+  }));
+  
+  if (result.type === 'submissions/moveToReviewer/fulfilled') {
+    toast.success('Submission assigned to reviewer successfully');
+    dispatch(getSubmission(id));
+  }
+};
 
   const handleSendToReviewer = async () => {
     const result = await dispatch(moveToReviewer({ id, editorNotes: actionNotes }));

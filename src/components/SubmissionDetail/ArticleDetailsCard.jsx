@@ -1,4 +1,4 @@
-import { FaBan, FaFileAlt } from 'react-icons/fa';
+import { FaBan, FaFileAlt, FaUser } from 'react-icons/fa';
 
 function ArticleDetailsCard({ submission, user, onOpenPdf }) {
   return (
@@ -66,7 +66,32 @@ function ArticleDetailsCard({ submission, user, onOpenPdf }) {
           </div>
         </div>
       )}
-
+{submission.reviewerAssigned && (
+  <div className="mt-6 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-6 border-2 border-violet-200">
+    <h3 className="font-bold text-violet-900 mb-3 text-lg flex items-center space-x-2">
+      <FaUser className="w-5 h-5" />
+      <span>Assigned Reviewer</span>
+    </h3>
+    <div className="space-y-2">
+      <div className="font-semibold text-gray-900">
+        {submission.reviewerAssigned.firstName} {submission.reviewerAssigned.lastName}
+      </div>
+      <div className="text-sm text-gray-600">{submission.reviewerAssigned.email}</div>
+      {submission.reviewerAssigned.specialization && submission.reviewerAssigned.specialization.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {submission.reviewerAssigned.specialization.map((spec, idx) => (
+            <span key={idx} className="px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-bold capitalize">
+              {spec}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="text-xs text-gray-500 mt-2">
+        Active Reviews: <span className="font-bold text-gray-900">{submission.reviewerAssigned.activeReviews || 0}</span>
+      </div>
+    </div>
+  </div>
+)}
       {submission.rejectionReason && (
         <div className="mt-6 bg-gradient-to-r from-rose-50 to-red-50 border-2 border-rose-300 rounded-xl p-6 animate-scale-in">
           <h3 className="font-bold text-rose-900 mb-3 text-lg flex items-center space-x-2">
