@@ -30,7 +30,32 @@ function JournalView() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState(statusParam || 'all');
+const [queries, setQueries] = useState([]);
+const [showQueries, setShowQueries] = useState(false);
 
+useEffect(() => {
+  if (user.role === 'editor') {
+    fetchQueries();
+  }
+}, [user.role]);
+
+const fetchQueries = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/editor/queries/allQueries`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await response.json();
+    console.log(data.data)
+    if (data.data) {
+      setQueries(data.data);
+    }
+  } catch (error) {
+    console.error('Error fetching queries:', error);
+  }
+};
   useEffect(() => {
     if (filterStatus === 'all') {
       dispatch(getSubmissionsByJournal({ journal }));
@@ -97,6 +122,15 @@ function JournalView() {
           <h1 className="text-lg font-semibold capitalize">
             {journal} Journal - {user.role === 'editor' ? 'Editor' : 'Reviewer'} View
           </h1>
+          {user.role === 'editor' && (
+  <button
+    onClick={() => setShowQueries(!showQueries)}
+    className="ml-4 flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-3 py-1 rounded transition-colors"
+  >
+    <FaFile className="w-4 h-4" />
+    <span className="text-sm">Queries ({queries.length})</span>
+  </button>
+)}
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
@@ -292,6 +326,42 @@ function JournalView() {
           </div>
         </div>
       </div>
+      {/* Queries Modal */}
+{showQueries && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Author Queries</h2>
+        <button
+          onClick={() => setShowQueries(false)}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6">
+        {queries.length === 0 ? (
+          <p className="text-center text-gray-500">No queries yet</p>
+        ) : (
+          <div className="space-y-4">
+            {queries.map((query) => (
+              <div key={query._id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-gray-900">{query.subject}</h3>
+                  <span className="text-xs text-gray-500">
+                    {format(new Date(query.createdAt), 'MMM dd, yyyy HH:mm')}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mb-2">{query.message}</p>
+                <p className="text-xs text-gray-500">From: {query.email}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

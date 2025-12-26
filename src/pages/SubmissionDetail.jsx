@@ -1,12 +1,14 @@
+
+
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaEdit, FaUndo } from 'react-icons/fa';
-import { canEditSubmission, reviewerSendBack, editorSendBack   } from '../redux/slices/submissionSlice';
+import { canEditSubmission, reviewerSendBack, editorSendBack } from '../redux/slices/submissionSlice';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import SubmissionTimeline from '../components/SubmissionTimeline';
-import { 
+import {
   getSubmission,
   approveSubmission,
   rejectSubmission,
@@ -18,7 +20,7 @@ import {
 import { getSubmissionEmails, sendEmail } from '../redux/slices/emailSlice';
 import { logout } from '../redux/slices/authSlice';
 import { toast } from 'react-toastify';
-import { 
+import {
   FaArrowLeft, FaSignOutAlt, FaUser, FaDownload, FaEnvelope,
   FaPaperPlane, FaImage, FaTimes, FaCheck, FaBan, FaForward,
   FaCalendar, FaClock, FaBook, FaFileAlt
@@ -29,12 +31,12 @@ function SubmissionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
+
   const { user } = useSelector((state) => state.auth);
-  const { currentSubmission, isLoading, canEdit} = useSelector((state) => state.submissions);
+  const { currentSubmission, isLoading, canEdit } = useSelector((state) => state.submissions);
   const { emails } = useSelector((state) => state.emails);
-const [showPdfViewer, setShowPdfViewer] = useState(false);
-const [pdfUrl, setPdfUrl] = useState(null);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);
   const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
@@ -42,9 +44,12 @@ const [pdfUrl, setPdfUrl] = useState(null);
   const [showActionModal, setShowActionModal] = useState(null);
   const [actionNotes, setActionNotes] = useState('');
   const [publicationDate, setPublicationDate] = useState('');
-const [watermarkPosition, setWatermarkPosition] = useState({ x: 50, y: 50 });
-const [showScreenshotWarning, setShowScreenshotWarning] = useState(false);
-
+  const [watermarkPosition, setWatermarkPosition] = useState({ x: 50, y: 50 });
+  const [showScreenshotWarning, setShowScreenshotWarning] = useState(false);
+  const [pageNotes, setPageNotes] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [currentPageNote, setCurrentPageNote] = useState('');
   useEffect(() => {
     dispatch(getSubmission(id));
     dispatch(getSubmissionEmails(id));
@@ -56,71 +61,123 @@ const [showScreenshotWarning, setShowScreenshotWarning] = useState(false);
     }
   }, [dispatch, id, user.role]);
 
-// Add this useEffect to detect screenshot attempts and move watermark
-useEffect(() => {
-  if (!showPdfViewer || user.role !== 'reviewer') return;
+  // Load page notes from localStorage when PDF viewer opens
+  useEffect(() => {
+    if (showPdfViewer && user.role === 'reviewer') {
+      const savedNotes = localStorage.getItem(`submission_notes_${id}`);
+      if (savedNotes) {
+        setPageNotes(JSON.parse(savedNotes));
+      }
+    }
+  }, [showPdfViewer, id, user.role]);
 
-  // Move watermark randomly
-  const moveWatermark = setInterval(() => {
-    setWatermarkPosition({
-      x: Math.random() * 80 + 10,
-      y: Math.random() * 80 + 10
-    });
-  }, 100000);
+  // Load current page note when page changes
+  useEffect(() => {
+    if (pageNotes[currentPage]) {
+      setCurrentPageNote(pageNotes[currentPage]);
+    } else {
+      setCurrentPageNote('');
+    }
+  }, [currentPage, pageNotes]);
 
-  // Detect screenshot attempts (keyboard shortcuts)
-  const detectScreenshot = (e) => {
-    // Windows: Win+Shift+S, PrtScn, Alt+PrtScn
-    // Mac: Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    
-    const screenshotKeys = isMac 
-      ? ((e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5')) || e.key === 'PrintScreen')
-      : ((e.key === 'PrintScreen') || (e.metaKey && e.shiftKey && e.key === 'S'));
+  // Add this useEffect to detect screenshot attempts and move watermark
+  useEffect(() => {
+    if (!showPdfViewer || user.role !== 'reviewer') return;
 
-    if (screenshotKeys) {
-      e.preventDefault();
-      setShowScreenshotWarning(true);
-      setTimeout(() => setShowScreenshotWarning(false), 3000);
-      
-      // Log screenshot attempt to backend
-      fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/log-screenshot-attempt`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
+    // Move watermark randomly
+    const moveWatermark = setInterval(() => {
+      setWatermarkPosition({
+        x: Math.random() * 80 + 10,
+        y: Math.random() * 80 + 10
+      });
+    }, 100000);
+
+    // Detect screenshot attempts (keyboard shortcuts)
+    const detectScreenshot = (e) => {
+      // Windows: Win+Shift+S, PrtScn, Alt+PrtScn
+      // Mac: Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+      const screenshotKeys = isMac
+        ? ((e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5')) || e.key === 'PrintScreen')
+        : ((e.key === 'PrintScreen') || (e.metaKey && e.shiftKey && e.key === 'S'));
+
+      if (screenshotKeys) {
+        e.preventDefault();
+        setShowScreenshotWarning(true);
+        setTimeout(() => setShowScreenshotWarning(false), 3000);
+
+        // Log screenshot attempt to backend
+        fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/log-screenshot-attempt`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    };
+    // Save note for current page
+   
+    // Detect when user leaves/returns to tab (common during screenshot)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // User might be taking screenshot
+        fetch(`/api/submissions/${id}/log-activity`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ activity: 'tab_hidden' })
+        });
+      }
+    };
+
+    document.addEventListener('keydown', detectScreenshot);
+    document.addEventListener('keyup', detectScreenshot);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(moveWatermark);
+      document.removeEventListener('keydown', detectScreenshot);
+      document.removeEventListener('keyup', detectScreenshot);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [showPdfViewer, user.role, id]);
+ const handleSavePageNote = () => {
+      const updatedNotes = {
+        ...pageNotes,
+        [currentPage]: currentPageNote
+      };
+      setPageNotes(updatedNotes);
+      localStorage.setItem(`submission_notes_${id}`, JSON.stringify(updatedNotes));
+      toast.success(`Note saved for page ${currentPage}`);
+    };
+
+    // Delete note for current page
+    const handleDeletePageNote = () => {
+      const updatedNotes = { ...pageNotes };
+      delete updatedNotes[currentPage];
+      setPageNotes(updatedNotes);
+      setCurrentPageNote('');
+      localStorage.setItem(`submission_notes_${id}`, JSON.stringify(updatedNotes));
+      toast.success(`Note deleted for page ${currentPage}`);
+    };
+
+    // Merge all page notes into one text
+    const mergeAllNotes = () => {
+      const sortedPages = Object.keys(pageNotes).sort((a, b) => Number(a) - Number(b));
+      let mergedNotes = '';
+
+      sortedPages.forEach((page, index) => {
+        if (pageNotes[page].trim()) {
+          mergedNotes += `<strong>Page ${page}:</strong><br/>${pageNotes[page]}<br/><br/>`;
         }
       });
-    }
-  };
 
-  // Detect when user leaves/returns to tab (common during screenshot)
-  const handleVisibilityChange = () => {
-    if (document.hidden) {
-      // User might be taking screenshot
-      fetch(`/api/submissions/${id}/log-activity`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ activity: 'tab_hidden' })
-      });
-    }
-  };
-
-  document.addEventListener('keydown', detectScreenshot);
-  document.addEventListener('keyup', detectScreenshot);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-
-  return () => {
-    clearInterval(moveWatermark);
-    document.removeEventListener('keydown', detectScreenshot);
-    document.removeEventListener('keyup', detectScreenshot);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  };
-}, [showPdfViewer, user.role, id]);
-
+      return mergedNotes;
+    };
   // NEW: Handle editor send back to author
   const handleEditorSendBack = async () => {
     if (!actionNotes) {
@@ -140,72 +197,79 @@ useEffect(() => {
     dispatch(logout());
     navigate('/login');
   };
-  
-const handleOpenPdf = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    // Check file type first
-    const isDocx = currentSubmission.documentFile.filename.toLowerCase().endsWith('.docx') ||
-                   currentSubmission.documentFile.mimetype?.includes('wordprocessingml');
-    
-    if (isDocx) {
-      // For DOCX files, trigger download instead of viewing
-      const response = await fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/stream-document`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        
-        // Create a temporary link and trigger download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = currentSubmission.documentFile.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast.info('DOCX file downloaded. Please open it in Microsoft Word or compatible software.');
-      } else {
-        toast.error('Failed to download document');
-      }
-    } else {
-      // For PDF files, open in viewer
-      const response = await fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/stream-document`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      console.log(response);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setPdfUrl(url);
-        setShowPdfViewer(true);
-      } else {
-        toast.error('Failed to load document');
-      }
-    }
-  } catch (error) {
-    console.error('Error loading document:', error);
-    toast.error('Error loading document');
-  }
-};
 
-const handleClosePdf = () => {
-  if (pdfUrl) {
-    URL.revokeObjectURL(pdfUrl);
-    setPdfUrl(null);
-  }
-  setShowPdfViewer(false);
-};
+  const handleOpenPdf = async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      // Check file type first
+      const isDocx = currentSubmission.documentFile.filename.toLowerCase().endsWith('.docx') ||
+        currentSubmission.documentFile.mimetype?.includes('wordprocessingml');
+
+      if (isDocx) {
+        // For DOCX files, trigger download instead of viewing
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/submissions/${id}/stream-document`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+
+          // Create a temporary link and trigger download
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = currentSubmission.documentFile.filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          toast.info('DOCX file downloaded. Please open it in Microsoft Word or compatible software.');
+        } else {
+          toast.error('Failed to download document');
+        }
+      } else {
+        // For PDF files, open in viewer
+        const response = await fetch(`https://ms-publication-backend.onrender.com/api/submissions/${id}/stream-document`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        console.log(response);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setPdfUrl(url);
+          setShowPdfViewer(true);
+        } else {
+          toast.error('Failed to load document');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading document:', error);
+      toast.error('Error loading document');
+    }
+  };
+
+  const handleClosePdf = () => {
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    }
+    setShowPdfViewer(false);
+  };
 
   const handleSendBack = async () => {
+    // Auto-populate with merged notes if not already filled
+    if (!actionNotes && Object.keys(pageNotes).length > 0) {
+      const merged = mergeAllNotes();
+      setActionNotes(merged);
+      return; // Don't submit yet, let reviewer review the merged notes
+    }
+
     if (!actionNotes) {
       toast.error('Please provide notes for the editor');
       return;
@@ -216,6 +280,9 @@ const handleClosePdf = () => {
       toast.success('Submission sent back to editor');
       setShowActionModal(null);
       setActionNotes('');
+      // Clear localStorage notes after successful send back
+      localStorage.removeItem(`submission_notes_${id}`);
+      setPageNotes({});
       dispatch(getSubmission(id));
     }
   };
@@ -298,14 +365,21 @@ const handleClosePdf = () => {
     }
   };
 
-  const handleMoveToReviewer = async () => {
-    const result = await dispatch(moveToReviewer(id));
+  const handleMoveToReviewer = () => {
+    setShowActionModal('send_to_reviewer');
+    // const result = await dispatch(moveToReviewer(id));
+    // if (result.type === 'submissions/moveToReviewer/fulfilled') {
+    //   toast.success('Submission moved to reviewer');
+    //   dispatch(getSubmission(id));
+    // }
+  };
+  const handleSendToReviewer = async () => {
+    const result = await dispatch(moveToReviewer({ id, editorNotes: actionNotes }));
     if (result.type === 'submissions/moveToReviewer/fulfilled') {
       toast.success('Submission moved to reviewer');
       dispatch(getSubmission(id));
     }
-  };
-
+  }
   const handleSchedule = async () => {
     if (!publicationDate) {
       toast.error('Please select a publication date');
@@ -328,7 +402,7 @@ const handleClosePdf = () => {
       approved_by_editor: { class: 'bg-sky-50 text-sky-700 border-sky-300', text: 'Approved by Editor', icon: FaCheck },
       rejected_by_editor: { class: 'bg-rose-50 text-rose-700 border-rose-300', text: 'Rejected', icon: FaBan },
       with_reviewer: { class: 'bg-violet-50 text-violet-700 border-violet-300', text: 'With Reviewer', icon: FaUser },
-      approved_by_reviewer: { class: 'bg-emerald-50 text-emerald-700 border-emerald-300', text: 'Approved', icon: FaCheck },
+      approved_by_reviewer: { class: 'bg-emerald-50 text-emerald-700 border-emerald-300', text: 'Approved by reviewer', icon: FaCheck },
       rejected_by_reviewer: { class: 'bg-rose-50 text-rose-700 border-rose-300', text: 'Rejected', icon: FaBan },
       scheduled: { class: 'bg-indigo-50 text-indigo-700 border-indigo-300', text: 'Scheduled', icon: FaCalendar },
       published: { class: 'bg-teal-50 text-teal-700 border-teal-300', text: 'Published', icon: FaBook },
@@ -338,7 +412,7 @@ const handleClosePdf = () => {
 
   const canShowActions = () => {
     if (user.role === 'editor') {
-      return ['pending', 'approved_by_editor', 'approved_by_reviewer'].includes(currentSubmission?.status);
+      return ['pending', 'approved_by_editor', 'approved_by_reviewer', 'with_reviewer'].includes(currentSubmission?.status);
     } else if (user.role === 'reviewer') {
       return currentSubmission?.status === 'with_reviewer';
     }
@@ -431,11 +505,10 @@ const handleClosePdf = () => {
       `}</style>
 
       {/* Top Header with gradient */}
-      <div className={`h-16 bg-gradient-to-r ${
-        user.role === 'editor' ? 'from-teal-600 via-teal-700 to-teal-800' : 
-        user.role === 'reviewer' ? 'from-violet-600 via-purple-700 to-violet-800' : 
-        'from-emerald-600 via-teal-700 to-emerald-800'
-      } flex items-center justify-between px-8 text-white shadow-xl animate-slide-down`}>
+      <div className={`h-16 bg-gradient-to-r ${user.role === 'editor' ? 'from-teal-600 via-teal-700 to-teal-800' :
+          user.role === 'reviewer' ? 'from-violet-600 via-purple-700 to-violet-800' :
+            'from-emerald-600 via-teal-700 to-emerald-800'
+        } flex items-center justify-between px-8 text-white shadow-xl animate-slide-down`}>
         <div className="flex items-center space-x-6">
           <button
             onClick={handleBack}
@@ -505,7 +578,7 @@ const handleClosePdf = () => {
                 {/* Editor/Reviewer Actions */}
                 {canShowActions() && (
                   <>
-                    {user.role === 'editor' && currentSubmission.status === 'pending' && (
+                    {user.role === 'editor' && currentSubmission.status !== 'approved_by_editor' && (
                       <>
                         <button
                           onClick={() => setShowActionModal('approve')}
@@ -521,7 +594,7 @@ const handleClosePdf = () => {
                           <FaBan className="group-hover:rotate-180 transition-transform duration-500" />
                           <span>Reject</span>
                         </button>
-                         <button
+                        <button
                           onClick={() => setShowActionModal('editor_sendback')}
                           className="group flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                         >
@@ -530,8 +603,8 @@ const handleClosePdf = () => {
                         </button>
                       </>
                     )}
-                    
-                    {user.role === 'editor' && currentSubmission.status === 'approved_by_editor' && (
+
+                    {user.role === 'editor' && currentSubmission.status !== 'with_reviewer' && currentSubmission.status !== 'approved_by_editor' && (
                       <button
                         onClick={handleMoveToReviewer}
                         className="group flex items-center space-x-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
@@ -539,10 +612,12 @@ const handleClosePdf = () => {
                         <FaForward className="group-hover:translate-x-1 transition-transform" />
                         <span>Move to Reviewer</span>
                       </button>
-                      
+
                     )}
 
-                    {user.role === 'editor' && currentSubmission.status === 'approved_by_reviewer' && (
+
+
+                    {user.role === 'editor' && currentSubmission.status === 'approved_by_editor' && (
                       <> <button
                         onClick={() => setShowActionModal('schedule')}
                         className="group flex items-center space-x-2 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
@@ -550,7 +625,7 @@ const handleClosePdf = () => {
                         <FaCalendar className="group-hover:scale-110 transition-transform" />
                         <span>Schedule Publication</span>
                       </button>
-                                              {/* NEW: Can also send back after approval if needed */}
+                        {/* NEW: Can also send back after approval if needed */}
                         <button
                           onClick={() => setShowActionModal('editor_sendback')}
                           className="group flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
@@ -560,7 +635,7 @@ const handleClosePdf = () => {
                         </button>
 
                       </>
-                     
+
                     )}
 
                     {user.role === 'reviewer' && currentSubmission.status === 'with_reviewer' && (
@@ -580,7 +655,14 @@ const handleClosePdf = () => {
                           <span>Reject</span>
                         </button>
                         <button
-                          onClick={() => setShowActionModal('sendback')}
+                          onClick={() => {
+                            setShowActionModal('sendback');
+                            // Auto-populate with merged notes
+                            if (Object.keys(pageNotes).length > 0) {
+                              const merged = mergeAllNotes();
+                              setActionNotes(merged);
+                            }
+                          }}
                           className="group flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                         >
                           <FaUndo className="group-hover:-rotate-180 transition-transform duration-500" />
@@ -655,7 +737,7 @@ const handleClosePdf = () => {
                 {currentSubmission.metadata?.title}
               </h2>
             </div>
-                 {/* {user.role === 'author' && currentSubmission.editorNotes && currentSubmission.status === 'pending' && (
+            {/* {user.role === 'author' && currentSubmission.editorNotes && currentSubmission.status === 'pending' && (
               <div className="mt-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-6 animate-scale-in">
                 <h3 className="font-bold text-amber-900 mb-3 text-lg flex items-center space-x-2">
                   <FaUndo className="w-5 h-5" />
@@ -670,24 +752,24 @@ const handleClosePdf = () => {
                 </p>
               </div>
             )} */}
-            
+
             {currentSubmission.metadata?.subtitle && (
               <p className="text-xl text-gray-600 mb-6 font-medium italic">{currentSubmission.metadata.subtitle}</p>
             )}
 
-           <div className="mb-6 bg-gradient-to-br from-teal-50 to-blue-50 rounded-xl p-6 border-l-4 border-teal-600">
-  <h3 className="font-bold text-teal-900 mb-3 text-lg flex items-center space-x-2">
-    <FaFileAlt className="w-5 h-5" />
-    <span>Abstract</span>
-  </h3>
+            <div className="mb-6 bg-gradient-to-br from-teal-50 to-blue-50 rounded-xl p-6 border-l-4 border-teal-600">
+              <h3 className="font-bold text-teal-900 mb-3 text-lg flex items-center space-x-2">
+                <FaFileAlt className="w-5 h-5" />
+                <span>Abstract</span>
+              </h3>
 
-  <div
-    className="text-gray-800 leading-relaxed prose prose-teal max-w-none"
-    dangerouslySetInnerHTML={{
-      __html: currentSubmission.metadata?.abstract || "",
-    }}
-  />
-</div>
+              <div
+                className="text-gray-800 leading-relaxed prose prose-teal max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: currentSubmission.metadata?.abstract || "",
+                }}
+              />
+            </div>
 
 
             {currentSubmission.metadata?.keywords && currentSubmission.metadata.keywords.length > 0 && (
@@ -706,29 +788,29 @@ const handleClosePdf = () => {
               </div>
             )}
 
-       {currentSubmission.documentFile && (
-  <div className="mt-6 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-6 border-2 border-gray-200">
-    <h3 className="font-bold text-gray-900 mb-3 text-lg flex items-center space-x-2">
-      <FaFileAlt className="w-5 h-5 text-teal-600" />
-      <span>Document</span>
-    </h3>
-    <div className="flex items-center justify-between bg-white px-6 py-4 rounded-lg border-2 border-teal-600">
-      <div className="flex items-center space-x-3">
-        <FaFileAlt className="w-5 h-5 text-teal-600" />
-        <span className="font-medium text-teal-700">
-          {currentSubmission.documentFile.filename}
-        </span>
-      </div>
-      <button
-        onClick={handleOpenPdf}
-        className="flex items-center space-x-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-      >
-        <FaFileAlt className="w-4 h-4" />
-        <span>Open Document</span>
-      </button>
-    </div>
-  </div>
-)}
+            {currentSubmission.documentFile && (
+              <div className="mt-6 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-6 border-2 border-gray-200">
+                <h3 className="font-bold text-gray-900 mb-3 text-lg flex items-center space-x-2">
+                  <FaFileAlt className="w-5 h-5 text-teal-600" />
+                  <span>Document</span>
+                </h3>
+                <div className="flex items-center justify-between bg-white px-6 py-4 rounded-lg border-2 border-teal-600">
+                  <div className="flex items-center space-x-3">
+                    <FaFileAlt className="w-5 h-5 text-teal-600" />
+                    <span className="font-medium text-teal-700">
+                      {currentSubmission.documentFile.filename}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleOpenPdf}
+                    className="flex items-center space-x-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-6 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    <FaFileAlt className="w-4 h-4" />
+                    <span>Open Document</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {currentSubmission.rejectionReason && (
               <div className="mt-6 bg-gradient-to-r from-rose-50 to-red-50 border-2 border-rose-300 rounded-xl p-6 animate-scale-in">
@@ -866,11 +948,10 @@ const handleClosePdf = () => {
                         style={{ animationDelay: `${idx * 0.1}s` }}
                       >
                         <div
-                          className={`p-4 rounded-2xl ${
-                            isFromMe 
-                              ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg' 
+                          className={`p-4 rounded-2xl ${isFromMe
+                              ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg'
                               : 'bg-white border-2 border-gray-200 shadow-md hover-lift'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className={`font-bold text-sm ${isFromMe ? 'text-white' : 'text-gray-900'}`}>
@@ -910,27 +991,26 @@ const handleClosePdf = () => {
       </div>
 
       {/* Action Modal */}
-    {showActionModal && (
+      {showActionModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-scale-in">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className={`p-6 bg-gradient-to-r ${
-              showActionModal === 'approve' ? 'from-emerald-500 to-teal-600' :
-              showActionModal === 'reject' ? 'from-rose-500 to-red-600' :
-              showActionModal === 'editor_sendback' ? 'from-amber-500 to-orange-600' :
-              showActionModal === 'sendback' ? 'from-orange-500 to-amber-600' :
-              'from-indigo-500 to-blue-600'
-            } text-white rounded-t-2xl`}>
+            <div className={`p-6 bg-gradient-to-r ${showActionModal === 'approve' ? 'from-emerald-500 to-teal-600' :
+                showActionModal === 'reject' ? 'from-rose-500 to-red-600' :
+                  showActionModal === 'editor_sendback' ? 'from-amber-500 to-orange-600' :
+                    showActionModal === 'sendback' ? 'from-orange-500 to-amber-600' :
+                      'from-indigo-500 to-blue-600'
+              } text-white rounded-t-2xl`}>
               <h3 className="text-2xl font-bold capitalize flex items-center space-x-3">
                 {showActionModal === 'editor_sendback' && <FaUndo className="w-6 h-6" />}
                 <span>
                   {showActionModal === 'editor_sendback' ? 'Send Back to Author' :
-                   showActionModal === 'sendback' ? 'Send Back to Editor' : 
-                   showActionModal === 'schedule' ? 'Schedule Publication' : 
-                   `${showActionModal} Submission`}
+                    showActionModal === 'sendback' ? 'Send Back to Editor' :
+                      showActionModal === 'schedule' ? 'Schedule Publication' :
+                        `${showActionModal} Submission`}
                 </span>
               </h3>
             </div>
-            
+
             <div className="p-6">
               {showActionModal === 'schedule' ? (
                 <div>
@@ -946,30 +1026,30 @@ const handleClosePdf = () => {
                   />
                 </div>
               ) : (showActionModal === 'sendback' || showActionModal === 'editor_sendback') ? (
-  <div>
-    <label className="block text-sm font-bold text-gray-700 mb-2">
-      {showActionModal === 'editor_sendback' ? 'Notes for Author *' : 'Notes for Editor *'}
-    </label>
-    <p className="text-sm text-gray-600 mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-      Please explain what changes or corrections are needed in the submission.
-    </p>
-    <ReactQuill
-      theme="snow"
-      value={actionNotes}
-      onChange={setActionNotes}
-      modules={{
-        toolbar: [
-          [{ 'header': [1, 2, 3, false] }],
-          ['bold', 'italic', 'underline'],
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-          ['clean']
-        ]
-      }}
-      placeholder="Enter detailed notes about required changes..."
-      style={{ height: '200px', marginBottom: '50px' }}
-    />
-  </div>
-) : (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    {showActionModal === 'editor_sendback' ? 'Notes for Author *' : 'Notes for Editor *'}
+                  </label>
+                  <p className="text-sm text-gray-600 mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    Please explain what changes or corrections are needed in the submission.
+                  </p>
+                  <ReactQuill
+                    theme="snow"
+                    value={actionNotes}
+                    onChange={setActionNotes}
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        ['clean']
+                      ]
+                    }}
+                    placeholder="Enter detailed notes about required changes..."
+                    style={{ height: '200px', marginBottom: '50px' }}
+                  />
+                </div>
+              ) : (
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-3">
                     {showActionModal === 'reject' ? 'Rejection Reason *' : 'Notes (Optional)'}
@@ -996,29 +1076,30 @@ const handleClosePdf = () => {
               >
                 Cancel
               </button>
-         <button
-  onClick={
-    showActionModal === 'approve' ? handleApprove :
-    showActionModal === 'reject' ? handleReject :
-    showActionModal === 'editor_sendback' ? handleEditorSendBack :
-    showActionModal === 'sendback' ? handleSendBack :
-    handleSchedule
-  }
-  className={`px-6 py-3 rounded-xl text-white font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl ${
-    showActionModal === 'approve' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700' :
-    showActionModal === 'reject' ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700' :
-    (showActionModal === 'sendback' || showActionModal === 'editor_sendback') ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' :
-    'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700'
-  }`}
->
-  Confirm
-</button>
+              <button
+                onClick={
+                  showActionModal === 'send_to_reviewer' ? handleSendToReviewer :
+                    showActionModal === 'approve' ? handleApprove :
+                      showActionModal === 'reject' ? handleReject :
+                        showActionModal === 'editor_sendback' ? handleEditorSendBack :
+                          showActionModal === 'sendback' ? handleSendBack :
+                            handleSchedule
+                }
+                className={`px-6 py-3 rounded-xl text-white font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl ${showActionModal === 'approve' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700' :
+                    showActionModal === 'reject' ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700' :
+                      (showActionModal === 'sendback' || showActionModal === 'editor_sendback') ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' :
+                        'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700'
+                  }`}
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>
       )}
       {/* PDF Viewer Modal */}
-{/* Enhanced PDF Viewer Modal */}
+      {/* Enhanced PDF Viewer Modal */}
+     {/* Enhanced PDF Viewer Modal with Notes Panel */}
 {showPdfViewer && (
   <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
     {/* Header */}
@@ -1026,15 +1107,62 @@ const handleClosePdf = () => {
       <div className="flex items-center space-x-3">
         <FaFileAlt className="w-5 h-5" />
         <span className="font-bold text-lg">{currentSubmission.documentFile.filename}</span>
-       
       </div>
-      <button
-        onClick={handleClosePdf}
-        className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-all duration-300"
-      >
-        <FaTimes className="w-4 h-4" />
-        <span className="font-medium">Close</span>
-      </button>
+      <div className="flex items-center space-x-3">
+        {user.role === 'reviewer' && (
+          <>
+            {/* Page Navigation */}
+            <div className="flex items-center space-x-2 bg-white/20 px-4 py-2 rounded-lg">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                className="hover:bg-white/20 px-2 py-1 rounded transition-all"
+              >
+                ←
+              </button>
+              <span className="font-medium">
+                Page <input 
+                  type="number" 
+                  value={currentPage} 
+                  onChange={(e) => setCurrentPage(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-12 bg-transparent text-center border-b border-white/50 focus:outline-none"
+                  min="1"
+                />
+              </span>
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                className="hover:bg-white/20 px-2 py-1 rounded transition-all"
+              >
+                →
+              </button>
+            </div>
+            
+            {/* Toggle Notes Panel */}
+            <button
+              onClick={() => setShowNotesPanel(!showNotesPanel)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                showNotesPanel ? 'bg-amber-500' : 'bg-white/20 hover:bg-white/30'
+              }`}
+            >
+              <FaFileAlt className="w-4 h-4" />
+              <span className="font-medium">
+                {showNotesPanel ? 'Hide' : 'Show'} Notes
+                {Object.keys(pageNotes).length > 0 && (
+                  <span className="ml-2 bg-white text-teal-700 text-xs px-2 py-0.5 rounded-full">
+                    {Object.keys(pageNotes).length}
+                  </span>
+                )}
+              </span>
+            </button>
+          </>
+        )}
+        <button
+          onClick={handleClosePdf}
+          className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-all duration-300"
+        >
+          <FaTimes className="w-4 h-4" />
+          <span className="font-medium">Close</span>
+        </button>
+      </div>
     </div>
 
     {/* Screenshot Warning Banner */}
@@ -1047,94 +1175,197 @@ const handleClosePdf = () => {
       </div>
     )}
 
-    {/* PDF Viewer */}
-    <div 
-      className="flex-1 overflow-auto bg-gray-800 relative"
-      style={{
-        userSelect: user.role === 'reviewer' ? 'none' : 'auto',
-        WebkitUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
-        MozUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
-        msUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
-        WebkitTouchCallout: user.role === 'reviewer' ? 'none' : 'auto'
-      }}
-      onContextMenu={(e) => {
-        if (user.role === 'reviewer') {
-          e.preventDefault();
-          setShowScreenshotWarning(true);
-          setTimeout(() => setShowScreenshotWarning(false), 2000);
-        }
-      }}
-      onCopy={(e) => user.role === 'reviewer' && e.preventDefault()}
-      onCut={(e) => user.role === 'reviewer' && e.preventDefault()}
-      onPaste={(e) => user.role === 'reviewer' && e.preventDefault()}
-      onDragStart={(e) => user.role === 'reviewer' && e.preventDefault()}
-    >
-      {pdfUrl && (
-        <iframe
-          src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
-          className="w-full h-full"
-          title="PDF Viewer"
-          style={{
-            border: 'none',
-            pointerEvents: 'auto'
-          }}
-        />
-      )}
-
-      {/* Multiple Moving Watermarks for Reviewers */}
-      {user.role === 'reviewer' && (
-        <>
-          {/* Main moving watermark */}
-          <div 
-            className="absolute pointer-events-none transition-all duration-2000 ease-linear"
+    {/* Main Content Area */}
+    <div className="flex-1 flex overflow-hidden">
+      {/* PDF Viewer */}
+      <div 
+        className={`flex-1 overflow-auto bg-gray-800 relative transition-all duration-300 ${
+          showNotesPanel ? 'mr-96' : ''
+        }`}
+        style={{
+          userSelect: user.role === 'reviewer' ? 'none' : 'auto',
+          WebkitUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
+          MozUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
+          msUserSelect: user.role === 'reviewer' ? 'none' : 'auto',
+          WebkitTouchCallout: user.role === 'reviewer' ? 'none' : 'auto'
+        }}
+        onContextMenu={(e) => {
+          if (user.role === 'reviewer') {
+            e.preventDefault();
+            setShowScreenshotWarning(true);
+            setTimeout(() => setShowScreenshotWarning(false), 2000);
+          }
+        }}
+        onCopy={(e) => user.role === 'reviewer' && e.preventDefault()}
+        onCut={(e) => user.role === 'reviewer' && e.preventDefault()}
+        onPaste={(e) => user.role === 'reviewer' && e.preventDefault()}
+        onDragStart={(e) => user.role === 'reviewer' && e.preventDefault()}
+      >
+        {pdfUrl && (
+          <iframe
+            src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH&page=${currentPage}`}
+            className="w-full h-full"
+            title="PDF Viewer"
             style={{
-              left: `${watermarkPosition.x}%`,
-              top: `${watermarkPosition.y}%`,
-              transform: 'translate(-50%, -50%)',
-              zIndex: 10
-            }}
-          >
-            <div className="text-red-500/30 text-4xl font-bold transform -rotate-45 select-none whitespace-nowrap">
-              {user.firstName} {user.lastName} - {user.email}
-            </div>
-            <div className="text-red-500/20 text-sm text-center mt-2">
-              {new Date().toLocaleString()}
-            </div>
-          </div>
-
-          {/* Static corner watermarks */}
-          <div className="absolute top-4 left-4 text-white/20 text-xs font-mono pointer-events-none">
-            Reviewer: {user.firstName} {user.lastName}<br/>
-            {new Date().toLocaleString()}<br/>
-            ID: {id}
-          </div>
-          <div className="absolute top-4 right-4 text-white/20 text-xs font-mono pointer-events-none text-right">
-            CONFIDENTIAL<br/>
-            DO NOT COPY<br/>
-            DO NOT SHARE
-          </div>
-          <div className="absolute bottom-4 left-4 text-white/20 text-xs font-mono pointer-events-none">
-            All access logged
-          </div>
-          <div className="absolute bottom-4 right-4 text-white/20 text-xs font-mono pointer-events-none text-right">
-            {user.email}
-          </div>
-
-          {/* Diagonal repeating watermark pattern */}
-          <div 
-            className="absolute inset-0 pointer-events-none opacity-10"
-            style={{
-              backgroundImage: `repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 100px,
-                rgba(255, 0, 0, 0.1) 100px,
-                rgba(255, 0, 0, 0.1) 101px
-              )`,
-              zIndex: 5
+              border: 'none',
+              pointerEvents: 'auto'
             }}
           />
-        </>
+        )}
+
+        {/* Watermarks for Reviewers */}
+        {user.role === 'reviewer' && (
+          <>
+            <div 
+              className="absolute pointer-events-none transition-all duration-2000 ease-linear"
+              style={{
+                left: `${watermarkPosition.x}%`,
+                top: `${watermarkPosition.y}%`,
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10
+              }}
+            >
+              <div className="text-red-500/30 text-4xl font-bold transform -rotate-45 select-none whitespace-nowrap">
+                {user.firstName} {user.lastName} - {user.email}
+              </div>
+              <div className="text-red-500/20 text-sm text-center mt-2">
+                {new Date().toLocaleString()}
+              </div>
+            </div>
+
+            <div className="absolute top-4 left-4 text-white/20 text-xs font-mono pointer-events-none">
+              Reviewer: {user.firstName} {user.lastName}<br/>
+              {new Date().toLocaleString()}<br/>
+              ID: {id}
+            </div>
+            <div className="absolute top-4 right-4 text-white/20 text-xs font-mono pointer-events-none text-right">
+              CONFIDENTIAL<br/>
+              DO NOT COPY<br/>
+              DO NOT SHARE
+            </div>
+            <div className="absolute bottom-4 left-4 text-white/20 text-xs font-mono pointer-events-none">
+              All access logged
+            </div>
+            <div className="absolute bottom-4 right-4 text-white/20 text-xs font-mono pointer-events-none text-right">
+              {user.email}
+            </div>
+
+            <div 
+              className="absolute inset-0 pointer-events-none opacity-10"
+              style={{
+                backgroundImage: `repeating-linear-gradient(
+                  45deg,
+                  transparent,
+                  transparent 100px,
+                  rgba(255, 0, 0, 0.1) 100px,
+                  rgba(255, 0, 0, 0.1) 101px
+                )`,
+                zIndex: 5
+              }}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Notes Panel for Reviewers */}
+      {user.role === 'reviewer' && showNotesPanel && (
+        <div className="w-96 bg-white shadow-2xl flex flex-col overflow-hidden">
+          {/* Notes Header */}
+          <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-4">
+            <h3 className="font-bold text-lg flex items-center space-x-2">
+              <FaFileAlt className="w-5 h-5" />
+              <span>Notes for Page {currentPage}</span>
+            </h3>
+            {pageNotes[currentPage] && (
+              <p className="text-xs mt-1 opacity-90">Note exists for this page</p>
+            )}
+          </div>
+
+          {/* Notes Content */}
+          <div className="flex-1 flex flex-col p-6 space-y-4 overflow-y-auto">
+            {/* Current Page Note Editor */}
+            <div className="flex-1 flex flex-col">
+              <label className="text-sm font-bold text-gray-700 mb-2">
+                Note for Page {currentPage}
+              </label>
+              <textarea
+                value={currentPageNote}
+                onChange={(e) => setCurrentPageNote(e.target.value)}
+                placeholder={`Write notes about issues found on page ${currentPage}...`}
+                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all resize-none min-h-[200px]"
+              />
+            </div>
+
+            {/* Save/Delete Buttons */}
+            <div className="flex space-x-2">
+              <button
+                onClick={handleSavePageNote}
+                disabled={!currentPageNote.trim()}
+                className="flex-1 flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-300 disabled:to-gray-400 text-white px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
+              >
+                <FaCheck className="w-4 h-4" />
+                <span>Save Note</span>
+              </button>
+              {pageNotes[currentPage] && (
+                <button
+                  onClick={handleDeletePageNote}
+                  className="flex items-center justify-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105"
+                >
+                  <FaTimes className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* All Notes Summary */}
+            {Object.keys(pageNotes).length > 0 && (
+              <div className="border-t-2 border-gray-200 pt-4 mt-4">
+                <h4 className="font-bold text-gray-900 mb-3 flex items-center justify-between">
+                  <span>All Notes ({Object.keys(pageNotes).length} pages)</span>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Clear all notes?')) {
+                        setPageNotes({});
+                        setCurrentPageNote('');
+                        localStorage.removeItem(`submission_notes_${id}`);
+                        toast.success('All notes cleared');
+                      }
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700 font-normal"
+                  >
+                    Clear All
+                  </button>
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {Object.keys(pageNotes)
+                    .sort((a, b) => Number(a) - Number(b))
+                    .map((page) => (
+                      <div
+                        key={page}
+                        onClick={() => setCurrentPage(Number(page))}
+                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          Number(page) === currentPage
+                            ? 'border-amber-500 bg-amber-50'
+                            : 'border-gray-200 hover:border-amber-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-sm text-gray-900">
+                            Page {page}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {pageNotes[page].length} chars
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 line-clamp-2">
+                          {pageNotes[page]}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
 

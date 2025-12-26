@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 
 const SubmissionTimeline = ({ timeline }) => {
+  console.log(timeline)
   if (!timeline || timeline.length === 0) {
     return null;
   }
@@ -73,7 +74,7 @@ const SubmissionTimeline = ({ timeline }) => {
   // Check if event has detailed notes to display
   const hasDetailedNotes = (event) => {
     return event.notes && event.notes.trim().length > 0 && 
-           ['editor_sent_back', 'reviewer_sent_back', 'editor_rejected', 'reviewer_rejected'].includes(event.eventType);
+           ['editor_sent_back', 'reviewer_sent_back', 'editor_rejected', 'reviewer_rejected','forwarded_to_reviewer'].includes(event.eventType);
   };
 
   return (
@@ -118,7 +119,7 @@ const SubmissionTimeline = ({ timeline }) => {
                     <p className="text-sm text-gray-700 mb-2">{event.description}</p>
                   )}
                    {event.notes && (
-                    <p className="text-sm text-gray-700 mb-2">{event.notes}</p>
+                    <div className="text-sm text-gray-700 mb-2"  dangerouslySetInnerHTML={{ __html: event.notes }}/>
                   )}
 
                   {/* Metadata (if exists) */}
@@ -133,6 +134,7 @@ const SubmissionTimeline = ({ timeline }) => {
                   )}
 
                   {/* Detailed Notes Section - EXPANDED VERSION */}
+{/* 
                   {showNotes && (
                     <div className={`mt-4 p-4 rounded-lg border-2 ${
                       event.eventType === 'editor_sent_back' ? 'bg-amber-50/50 border-amber-300' :
@@ -157,7 +159,7 @@ const SubmissionTimeline = ({ timeline }) => {
                         </h4>
                       </div>
                       
-                      {/* Rich text notes display */}
+                      
                       <div 
                         className={`prose prose-sm max-w-none ${
                           event.eventType === 'editor_sent_back' ? 'text-amber-900' :
@@ -167,7 +169,7 @@ const SubmissionTimeline = ({ timeline }) => {
                         dangerouslySetInnerHTML={{ __html: event.notes }}
                       />
 
-                      {/* Action hint for send-back events */}
+                    
                       {(event.eventType === 'editor_sent_back' || event.eventType === 'reviewer_sent_back') && (
                         <div className={`mt-3 text-xs italic ${
                           event.eventType === 'editor_sent_back' ? 'text-amber-700' : 'text-orange-700'
@@ -181,6 +183,7 @@ const SubmissionTimeline = ({ timeline }) => {
                       )}
                     </div>
                   )}
+ */}
 
                   {/* Performed by info */}
                   {event.performedByRole && (

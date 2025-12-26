@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Document, Page } from 'react-pdf';
 import { FaChevronLeft, FaChevronRight, FaSearchPlus, FaSearchMinus } from 'react-icons/fa';
 
@@ -7,8 +7,39 @@ const InlinePdfViewer = ({ fileUrl }) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.2);
 
+  useEffect(() => {
+    // Disable right-click
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable keyboard shortcuts for inspect element
+    const handleKeyDown = (e) => {
+      // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
+      if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+        (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+        (e.ctrlKey && e.shiftKey && e.keyCode === 67) || // Ctrl+Shift+C
+        (e.ctrlKey && e.keyCode === 85) // Ctrl+U
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
-    <div className="bg-gray-100 rounded-xl p-4">
+    <div className="bg-gray-100 rounded-xl p-4" onContextMenu={(e) => e.preventDefault()}>
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -51,7 +82,10 @@ const InlinePdfViewer = ({ fileUrl }) => {
       </div>
 
       {/* PDF */}
-      <div className="flex justify-center overflow-auto">
+      <div 
+        className="flex justify-center overflow-auto select-none"
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <Document
           file={fileUrl}
           onLoadSuccess={({ numPages }) => setNumPages(numPages)}

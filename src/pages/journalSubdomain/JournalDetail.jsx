@@ -766,37 +766,193 @@ const InstructionsPage = ({ journal, colors }) => (
 
     <div className="grid lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
-        <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg animate-fade-in-up">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Submission Process</h2>
-          <div className="space-y-6">
-            {[
-              { step: 1, title: 'Prepare Your Manuscript', desc: 'Follow our formatting guidelines and prepare all necessary files' },
-              { step: 2, title: 'Submit Online', desc: 'Use our online submission system to upload your manuscript' },
-              { step: 3, title: 'Peer Review', desc: 'Your manuscript will undergo rigorous peer review' },
-              { step: 4, title: 'Revisions', desc: 'Address reviewer comments and resubmit if needed' },
-              { step: 5, title: 'Publication', desc: 'Upon acceptance, your article will be published online' }
-            ].map((step, index) => (
-              <div key={step.step} className={`flex items-start space-x-4 animate-slide-in-left delay-${index * 100}`}>
-                <div className={`w-12 h-12 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center flex-shrink-0 font-black text-white shadow-lg`}>
-                  {step.step}
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-1">{step.title}</h3>
-                  <p className="text-sm text-gray-600">{step.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+       International Journal of Pharmacological and Pharmaceutical Innovations (IJPPI)
+ISSN (Online): [To be updated] | ISSN (Print): [To be updated]
 
-        <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg animate-fade-in-up delay-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Manuscript Requirements</h2>
-          <div className="prose prose-lg max-w-none">
-            <p className="text-gray-700 leading-relaxed">
-              {journal.instructions || 'All submissions must be original research that has not been published elsewhere. Manuscripts should follow our formatting guidelines and include all necessary sections.'}
-            </p>
-          </div>
-        </div>
+Maxosmith Publications
+
+1. About the Journal
+IJPPI is an international, peer-reviewed, open-access journal dedicated to publishing innovative research in the fields of pharmacology, pharmaceutical sciences, drug development, formulation technology, pharmacokinetics, regulatory affairs, and related interdisciplinary topics. The journal accepts original research articles, review articles, short communications, and case studies.
+
+2. Scope of the Journal
+Authors are encouraged to submit manuscripts related to but not limited to:
+Pharmacological research
+Pharmaceutical formulation and drug delivery
+Drug design and discovery
+Regulatory and clinical studies
+Biopharmaceutics and pharmacokinetics
+Pharmacovigilance
+Herbal/ayurvedic drug innovations
+
+3. Types of Manuscripts Accepted
+Original Research Articles
+Review Articles
+Short Communications
+Case Reports (in pharmacology)
+Method Development or Validation Studies
+Book Reviews and Editorials (by invitation)
+
+4. Submission Guidelines
+Submissions must be in English.
+Manuscripts must be original, unpublished, and not under consideration elsewhere.
+Authors must submit their manuscripts via email to: ijppi@mspublication.com or via the online journal system at www.ijppi.mspublication.com.
+
+5. Manuscript Format
+Title Page
+Title of the manuscript
+Author(s) name, affiliation, ORCID iD
+Corresponding author with contact details (email, phone)
+Conflict of Interest declaration
+Abstract
+200–300 words summarizing background, objectives, methods, results, and conclusions.
+keywords:  3–6 words.
+Main Manuscript
+1.Introduction
+2.Materials and Methods
+3.Results and Discussion
+4.Conclusion
+5.Acknowledgments (if any)
+6.Conflict of Interest Statement
+7.Funding Source (if applicable)
+8.References – as per Vancouver or ICMJE style
+Formatting Requirements
+Font: Times New Roman, 12 pt
+Line spacing: 1.5
+Page Size: A4, 1-inch margins on all sides
+Use headings consistently (bold, sentence case)
+
+6. Ethical Considerations
+Manuscripts involving human/animal research must have approval from relevant ethics committees.
+Plagiarism will lead to immediate rejection. Use of plagiarism-detection software is mandatory before submission.
+Authors must declare any conflict of interest.
+
+7. Instructions for Authors: Manuscript Preparation
+a.General Guidelines
+Authors are requested to prepare manuscripts in clear, concise English, following these guidelines. All manuscripts must be submitted electronically through the journal submission system. The manuscript should be typed in 12-point Times New Roman font, double-spaced, with 1-inch margins on all sides. Number all pages consecutively.
+b.Title Page
+The title page should include the following information:
+- Title of the manuscript (concise and informative)
+- Full names of all authors (first name, middle initial, last name)
+- Institutional affiliations of each author
+- Corresponding author details (name, address, phone, email)
+- Running title (maximum 50 characters)
+c.Abstract and Keywords
+The abstract should not exceed 250 words. It must briefly state the purpose of the study, methods, key results, and major conclusions. Avoid citations in the abstract.
+Provide 3–6 keywords that are specific, accurate, and useful for indexing.
+d.Manuscript Sections
+Research articles should be divided into the following sections:
+- Introduction: State the background and objectives of the work.
+- Materials and Methods: Provide sufficient detail for reproducibility.
+- Results: Present findings clearly, supported by tables/figures.
+- Discussion: Interpret results and their significance.
+- Conclusion: Summarize key findings.
+- Acknowledgments: Acknowledge contributors and funding sources.
+e.Tables and Figures
+Tables should be numbered consecutively with Arabic numerals and placed at the end of the manuscript. Each table must have a descriptive title and be cited in the text. Figures should be high-resolution (300 dpi minimum), submitted as separate files (JPEG/TIFF), and numbered consecutively. Provide legends for all figures.
+f.References
+References should follow the Vancouver (ICMJE) style. Number references consecutively in the order they appear in the text. In-text citations should be in superscript (e.g., Smith^1^). Include all authors when fewer than six; if more, list the first six followed by 'et al.'
+g.Ethical Considerations
+Manuscripts reporting studies involving human participants or animals must include a statement of approval by the appropriate ethics committee. Informed consent must be obtained for human studies.
+h.Conflict of Interest
+All authors must disclose any financial or non-financial conflicts of interest that may influence the work.
+i.Article Types
+The journal accepts the following article types:
+- Original Research Articles (up to 6000 words)
+- Review Articles (up to 8000 words)
+- Short Communications (up to 3000 words)
+- Case Reports (up to 2000 words)
+- Letters to the Editor (up to 1000 words)
+
+8.Submission Procedure for Authors
+To ensure smooth handling and fast processing of manuscripts, authors are requested to carefully follow the submission procedure outlined below:
+
+Step 1: Manuscript Preparation
+Prepare your manuscript strictly according to the Author Guidelines available on the respective journal website.
+Ensure that the manuscript includes:
+oTitle Page (with author names, affiliations, ORCID IDs, corresponding author details)
+oAbstract and Keywords
+oMain Text (Introduction, Materials & Methods, Results, Discussion, Conclusion)
+oReferences (as per journal format)
+oTables, Figures, Graphical Abstract (if applicable)
+Manuscript should be in Microsoft Word (.doc/.docx) format.
+File size should not exceed 10 MB.
+
+Step 2: Plagiarism Check
+Authors are responsible for ensuring originality.
+Manuscripts must be accompanied by a plagiarism report generated from Turnitin/iThenticate/URKUND.
+
+Step 3: Online Submission
+Submit your manuscript online through the Journal’s Submission Portal (OJS/WordPress submission system).
+Alternatively, manuscripts may be sent via email to the editorial office:
+oeditor.ijppi@mspublication.com
+Ensure that the cover letter is attached, mentioning:
+oType of manuscript (Research/Review/Case Report etc.)
+oStatement of originality
+oConflicts of interest (if any)
+oApproval from all co-authors
+
+Step 4: Initial Screening
+The editorial office will verify:
+oManuscript completeness
+oCompliance with journal format
+oPlagiarism check result
+oEthical approval (if applicable)
+Manuscripts not following guidelines will be returned for correction before peer review.
+
+Step 5: Peer Review
+Eligible manuscripts are sent to two or more independent reviewers.
+The process is double-blind (reviewers and authors remain anonymous).
+Review time: 2–3 weeks on average.
+Decision may be: Accept / Minor Revision / Major Revision / Reject.
+
+Step 6: Revision & Resubmission
+Authors must submit revised manuscripts within the deadline provided.
+All changes must be highlighted or accompanied by a response letter.
+
+Step 7: Acceptance & Proofs
+Once accepted, the editorial office sends a formal acceptance letter.
+Authors will receive galley proofs (PDF) for final corrections.
+Proof corrections must be returned within 3 working days.
+
+Step 8: Publication
+Final versions are published online in the respective Volume & Issue.
+Each article is assigned a DOI (Digital Object Identifier).
+Authors receive citation details and a publication certificate (if applicable).
+
+Step 9: Post-Publication
+Published articles are indexed in Google Scholar, CrossRef, and other databases as applicable.
+Authors are encouraged to promote their article through institutional repositories, social media, and academic platforms (e.g., ResearchGate, Academia.edu).
+
+
+8. Review and Publication Process
+All manuscripts undergo double-blind peer review.
+Average review period: 3–4 weeks
+Accepted manuscripts will be copyedited and typeset before publication.
+Authors will receive proofs for final corrections prior to publication.
+
+9. Article Processing Charges (APC)
+For Indian Authors: ₹1500 (INR) per article
+For International Authors: $25 (USD)
+Charges cover peer review, DOI assignment, indexing, and online hosting
+
+10. Copyright and Licensing
+All content is published under Creative Commons Attribution License (CC BY 4.0).
+Authors retain copyright.
+
+11. Withdrawal Policy
+Authors must formally request withdrawal before final acceptance.
+Once peer review begins, unjustified withdrawal may lead to blacklisting.
+
+12. Contact Us
+Publisher: Maxosmith Publications.
+Email: support@mspublication.com 
+WhatsApp/Phone: +91-82730-66581.
+Website: www.mspublication.com
+Account Details: 
+MAXOSMITH (OPC) PRIVATE LIMITED
+AXIS BANK A/C NO- 920020056567710, 
+IFSC CODE- UTIB0000358
+The fee paid once is not refundable.
       </div>
 
       <div className="space-y-6">
@@ -860,7 +1016,21 @@ const ContactPage = ({ journal, colors }) => {
     }
 
     try {
-      const response = await api.post('/api/author/contact', formData, {
+      // Get journal name from journal.acronym (e.g., "IJPS" -> "pharma")
+      const journalMap = {
+        'IJPS': 'pharma',
+        'JHS': 'history',
+        'IJCR': 'chemistry',
+        'IJSR': 'science',
+        'JAT': 'ayurvedic'
+      };
+      
+      const journalName = journalMap[journal.acronym] || 'pharma';
+
+      const response = await api.post('/api/author/contact', {
+        ...formData,
+        journal: journalName
+      }, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

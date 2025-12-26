@@ -30,9 +30,11 @@ function Login() {
       if (user.role === 'author') {
         navigate('/author/dashboard');
       } else if (user.role === 'editor') {
-        navigate('/editor/dashboard');
+        // navigate('/editor/dashboard');
+        navigate('/editor/journal/pharma')
       } else if (user.role === 'reviewer') {
-        navigate('/reviewer/dashboard');
+        // navigate('/reviewer/dashboard');
+        navigate('/reviewer/journal/pharma')
       }
     }
 

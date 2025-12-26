@@ -15,7 +15,7 @@ import JournalView from './pages/JournalView';
 import JournalHomepage from './pages/journalSubdomain/JournalHomepage';
 import JournalDetail from './pages/journalSubdomain/JournalDetail';
 import EditSubmission from './pages/EditSubmission';
-
+import NotFound from './pages/NotFound';
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, token } = useSelector((state) => state.auth);
@@ -98,14 +98,14 @@ function App() {
           />
 
           {/* Editor Routes */}
-          <Route
+          {/* <Route
             path="/editor/dashboard"
             element={
               <ProtectedRoute allowedRoles={['editor']}>
                 <EditorDashboard />
               </ProtectedRoute>
             }
-          />
+          /> */}
           <Route
             path="/editor/journal/:journal"
             element={
@@ -116,14 +116,14 @@ function App() {
           />
 
           {/* Reviewer Routes */}
-          <Route
+          {/* <Route
             path="/reviewer/dashboard"
             element={
               <ProtectedRoute allowedRoles={['reviewer']}>
                 <ReviewerDashboard />
               </ProtectedRoute>
             }
-          />
+          /> */}
           <Route
             path="/reviewer/journal/:journal"
             element={
@@ -132,6 +132,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
 
